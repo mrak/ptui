@@ -25,6 +25,7 @@ library
                      , ini
                      , text
                      , aeson
+                     , GLFW-b
   default-language:    Haskell2010
 
 executable ptui
