@@ -31,31 +31,32 @@ readSettings fp = do
 warn :: String -> IO ()
 warn = hPutStrLn stderr
 
+
 makeWindow :: Int -> Int -> String -> IO GLFW.Window
 makeWindow w h title = do
+    let initError = error "Could not initialize a graphical interface"
     initialized <- GLFW.init
     if initialized
        then do
             mw <- GLFW.createWindow w h title Nothing Nothing
             case mw of
-                Nothing -> error "Could not create a window"
+                Nothing -> initError
                 Just w -> do
                     GLFW.makeContextCurrent mw
+                    GLFW.swapInterval 1
                     pure w
-       else error "Could not initialize GLFW"
+       else initError
 
 toGLColor :: String -> GL.Color4 GL.GLfloat
 toGLColor hex = GL.Color4 (realToFrac r) (realToFrac g) (realToFrac b) 1
     where RGB r g b = toSRGB $ sRGB24read hex
 
-loop :: Settings -> GLFW.Window -> IO ()
-loop settings window = do
-    (w, h) <- GLFW.getFramebufferSize window
+draw :: Settings -> GLFW.Window -> IO ()
+draw s w = do
+    (w, h) <- GLFW.getFramebufferSize w
     GL.viewport GL.$= (GL.Position 0 0, GL.Size (fromIntegral w) (fromIntegral h))
-    GL.clearColor GL.$= toGLColor (colorbg settings)
+    GL.clearColor GL.$= toGLColor (colorbg s)
     GL.clear [GL.ColorBuffer]
-    GLFW.swapInterval 1
 
-    GLFW.swapBuffers window
-    GLFW.pollEvents
-    loop settings window
+loop :: Settings -> GLFW.Window -> IO ()
+loop settings window = draw settings window >> GLFW.swapBuffers window >> GLFW.pollEvents >> loop settings window
