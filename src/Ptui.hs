@@ -6,7 +6,9 @@ import System.Directory (doesFileExist)
 import System.IO (hPutStrLn, stderr)
 import Control.Monad (when)
 import Control.Concurrent
+import Data.Colour.SRGB
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.Rendering.OpenGL as GL
 import qualified Data.Ini as I (readIniFile)
 
 ptui :: Args -> IO ()
@@ -14,7 +16,8 @@ ptui args = do
     settings <- readSettings (config args)
     window <- makeWindow 800 600 "ptui"
 
-    threadDelay 10000000
+    loop settings window
+
     GLFW.destroyWindow window
     GLFW.terminate
 
@@ -40,3 +43,19 @@ makeWindow w h title = do
                     GLFW.makeContextCurrent mw
                     pure w
        else error "Could not initialize GLFW"
+
+toGLColor :: String -> GL.Color4 GL.GLfloat
+toGLColor hex = GL.Color4 (realToFrac r) (realToFrac g) (realToFrac b) 1
+    where RGB r g b = toSRGB $ sRGB24read hex
+
+loop :: Settings -> GLFW.Window -> IO ()
+loop settings window = do
+    (w, h) <- GLFW.getFramebufferSize window
+    GL.viewport GL.$= (GL.Position 0 0, GL.Size (fromIntegral w) (fromIntegral h))
+    GL.clearColor GL.$= toGLColor (colorbg settings)
+    GL.clear [GL.ColorBuffer]
+    GLFW.swapInterval 1
+
+    GLFW.swapBuffers window
+    GLFW.pollEvents
+    loop settings window

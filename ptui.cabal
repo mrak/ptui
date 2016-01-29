@@ -28,6 +28,7 @@ executable ptui
                      , text
                      , aeson
                      , GLFW-b
+                     , OpenGL
                      , directory
   default-language:    Haskell2010
 
