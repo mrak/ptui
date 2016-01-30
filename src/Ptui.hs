@@ -15,9 +15,7 @@ ptui :: Args -> IO ()
 ptui args = do
     settings <- readSettings (config args)
     window <- makeWindow 800 600 "ptui"
-
     loop settings window
-
     GLFW.destroyWindow window
     GLFW.terminate
 
@@ -34,18 +32,19 @@ warn = hPutStrLn stderr
 
 makeWindow :: Int -> Int -> String -> IO GLFW.Window
 makeWindow w h title = do
-    let initError = error "Could not initialize a graphical interface"
     initialized <- GLFW.init
-    if initialized
-       then do
-            mw <- GLFW.createWindow w h title Nothing Nothing
-            case mw of
+    if not initialized
+       then initError
+       else do
+           mw <- GLFW.createWindow w h title Nothing Nothing
+           case mw of
                 Nothing -> initError
                 Just w -> do
                     GLFW.makeContextCurrent mw
                     GLFW.swapInterval 1
                     pure w
-       else initError
+
+initError = error "Could not initialize a graphical interface"
 
 toGLColor :: String -> GL.Color4 GL.GLfloat
 toGLColor hex = GL.Color4 (realToFrac r) (realToFrac g) (realToFrac b) 1
@@ -58,5 +57,8 @@ draw s w = do
     GL.clearColor GL.$= toGLColor (colorbg s)
     GL.clear [GL.ColorBuffer]
 
+render :: GLFW.Window -> IO ()
+render window = GLFW.swapBuffers window >> GLFW.pollEvents
+
 loop :: Settings -> GLFW.Window -> IO ()
-loop settings window = draw settings window >> GLFW.swapBuffers window >> GLFW.pollEvents >> loop settings window
+loop settings window = draw settings window >> render window >> loop settings window
