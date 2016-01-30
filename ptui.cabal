@@ -26,6 +26,7 @@ executable ptui
                      , colour
                      , ini
                      , text
+                     , stm
                      , aeson
                      , GLFW-b
                      , OpenGL

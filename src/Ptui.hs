@@ -2,10 +2,12 @@ module Ptui (ptui) where
 
 import Args
 import Settings
+import Events
 import System.Directory (doesFileExist)
 import System.IO (hPutStrLn, stderr)
-import Control.Monad (when)
+import Control.Monad (unless)
 import Control.Concurrent
+import Control.Concurrent.STM
 import Data.Colour.SRGB
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.Rendering.OpenGL as GL
@@ -15,7 +17,9 @@ ptui :: Args -> IO ()
 ptui args = do
     settings <- readSettings (config args)
     window <- makeWindow 800 600 "ptui"
-    loop settings window
+    queue <- newTQueueIO
+    setupEventQueue queue window
+    loop settings window queue
     GLFW.destroyWindow window
     GLFW.terminate
 
@@ -28,7 +32,6 @@ readSettings fp = do
 
 warn :: String -> IO ()
 warn = hPutStrLn stderr
-
 
 makeWindow :: Int -> Int -> String -> IO GLFW.Window
 makeWindow w h title = do
@@ -57,8 +60,20 @@ draw s w = do
     GL.clearColor GL.$= toGLColor (colorbg s)
     GL.clear [GL.ColorBuffer]
 
-render :: GLFW.Window -> IO ()
-render window = GLFW.swapBuffers window >> GLFW.pollEvents
+processEvents :: TQueue Event -> IO ()
+processEvents q = do
+    event <- atomically $ tryReadTQueue q
+    case event of
+         Nothing -> return ()
+         Just e -> processEvent e >> processEvents q
 
-loop :: Settings -> GLFW.Window -> IO ()
-loop settings window = draw settings window >> render window >> loop settings window
+processEvent = print
+
+loop :: Settings -> GLFW.Window -> TQueue Event -> IO ()
+loop settings window queue = do
+    draw settings window
+    GLFW.swapBuffers window
+    GLFW.waitEvents
+    processEvents queue
+    shouldClose <- GLFW.windowShouldClose window
+    unless shouldClose $ loop settings window queue
