@@ -16,9 +16,11 @@ cabal-version:       >=1.10
 executable ptui
   hs-source-dirs:      src
   main-is:             Main.hs
-  other-modules:       Ptui
-                     , Args
-                     , Settings
+  other-modules:       Ptui.Ptui
+                     , Ptui.Args
+                     , Ptui.Events
+                     , Ptui.Settings
+                     , Ptui.State
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base >= 4.7 && < 5
                      , optparse-applicative >= 0.12.1.0
@@ -27,7 +29,9 @@ executable ptui
                      , ini
                      , text
                      , stm
+                     , mtl
                      , aeson
+                     , transformers
                      , GLFW-b
                      , OpenGL
                      , directory

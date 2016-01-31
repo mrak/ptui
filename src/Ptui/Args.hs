@@ -1,4 +1,4 @@
-module Args where
+module Ptui.Args where
 
 import Options.Applicative
 import System.Environment.XDG.BaseDir
@@ -27,4 +27,4 @@ processArgs c = do
 
 getArgs :: IO Args
 getArgs = execParser parser >>= processArgs where
-    parser = (info (helper <*> options) (fullDesc <> header ""))
+    parser = info (helper <*> options) (fullDesc <> header "")

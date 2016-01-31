@@ -1,7 +1,7 @@
 module Main where
 
-import Args
-import Ptui
+import Ptui.Args
+import Ptui.Ptui
 
 main :: IO ()
 main = getArgs >>= ptui

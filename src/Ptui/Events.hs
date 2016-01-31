@@ -1,4 +1,4 @@
-module Events where
+module Ptui.Events where
 
 import Control.Concurrent.STM
 import qualified Graphics.UI.GLFW as GLFW
