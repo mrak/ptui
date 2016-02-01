@@ -20,21 +20,19 @@ executable ptui
                      , Ptui.Args
                      , Ptui.Events
                      , Ptui.Settings
-                     , Ptui.State
+                     , Ptui.Types
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base >= 4.7 && < 5
                      , optparse-applicative >= 0.12.1.0
                      , xdg-basedir
-                     , colour
                      , ini
                      , text
                      , stm
                      , mtl
-                     , aeson
                      , transformers
-                     , GLFW-b
-                     , OpenGL
                      , directory
+                     , X11
+                     , old-time
   default-language:    Haskell2010
 
 test-suite ptui-test

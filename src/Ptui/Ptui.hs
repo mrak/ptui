@@ -1,52 +1,52 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Ptui.Ptui (ptui) where
 
 import Ptui.Args
 import Ptui.Settings
 import Ptui.Events
-import Ptui.State
+import Ptui.Types
 import System.Directory (doesFileExist)
 import System.IO (hPutStrLn, stderr)
 import Control.Monad (unless)
 import Control.Monad.Trans (liftIO)
-import Control.Monad.Reader (asks, ReaderT, runReaderT, MonadReader)
-import Control.Monad.State (gets, StateT, runStateT, MonadState)
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.Reader (asks, runReaderT)
+import Control.Monad.State (gets, runStateT)
 import Control.Concurrent
-import Control.Concurrent.STM
-import Data.Colour.SRGB
-import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.Rendering.OpenGL as GL
+import Control.Concurrent.STM (newTQueueIO, tryReadTQueue, atomically)
+import Graphics.X11.Xlib
+import Graphics.X11.Xlib.Extras
+import System.Exit (exitSuccess)
+import System.Time
+import Data.Bits ((.|.))
 import qualified Data.Ini as I (readIniFile)
 
-newtype Ptui a = Ptui { run :: ReaderT PtuiSettings (StateT PtuiState IO) a
-                      } deriving (Functor, Applicative, Monad, MonadIO, MonadReader PtuiSettings, MonadState PtuiState)
-
-runPtui :: Ptui a -> Args -> IO ()
-runPtui p a = do
-    w <- makeWindow 800 600 "ptui"
+ptui :: Args -> IO ()
+ptui a = do
+    d <- openDisplay ""
+    let s = defaultScreen d
+        border = blackPixel d s
+    background <- initColor d "#262626"
+    rootw <- rootWindow d s
+    w <- createSimpleWindow d rootw 0 0 100 100 1 border background
+    setTextProperty d w "ptui" wM_NAME
+    mapWindow d w
+    selectInput d w (exposureMask .|. buttonPressMask)
     q <- newTQueueIO
     settings <- readSettings (config a)
     let state = PtuiState { cursorPosition = (0,0)
                           , window = w
+                          , display = d
+                          , screenNumber = s
                           , queue = q
                           }
     setupEventQueue q w
-    runStateT (runReaderT (run p) settings) state
-    GLFW.destroyWindow w
-    GLFW.terminate
+    runStateT (runReaderT (run loop) settings) state
+    exitSuccess
 
-ptui :: Args -> IO ()
-ptui = runPtui loop
-{-ptui :: Args -> IO ()-}
-{-ptui args = do-}
-    {-settings <- readSettings (config args)-}
-    {-window <- makeWindow 800 600 "ptui"-}
-    {-queue <- newTQueueIO-}
-    {-setupEventQueue queue window-}
-    {-loop settings window queue-}
-    {-GLFW.destroyWindow window-}
-    {-GLFW.terminate-}
+initColor :: Display -> String -> IO Pixel
+initColor display color = do
+  let colormap = defaultColormap display (defaultScreen display)
+  (apros,real) <- allocNamedColor display colormap color
+  return $ color_pixel apros
 
 readSettings :: FilePath -> IO PtuiSettings
 readSettings fp = do
@@ -58,52 +58,50 @@ readSettings fp = do
 warn :: String -> IO ()
 warn = hPutStrLn stderr
 
-makeWindow :: Int -> Int -> String -> IO GLFW.Window
-makeWindow w h title = do
-    initialized <- GLFW.init
-    if not initialized
-       then initError
-       else do
-           mw <- GLFW.createWindow w h title Nothing Nothing
-           case mw of
-                Nothing -> initError
-                Just w -> do
-                    GLFW.makeContextCurrent mw
-                    GLFW.swapInterval 1
-                    pure w
+drawInWin :: Display -> Window -> String ->IO ()
+drawInWin dpy win str = do
+    bgcolor <- initColor dpy "green"
+    fgcolor <- initColor dpy "blue"
+    gc <- createGC dpy win
+    fontStruc <- loadQueryFont dpy "-misc-fixed-*-*-*-*-10-*-*-*-*-*-*-*"
+    p <- createPixmap dpy win 200 100 (defaultDepthOfScreen (defaultScreenOfDisplay dpy))
+    setForeground dpy gc bgcolor
+    fillRectangle dpy p gc 0 0 200 100
+    setForeground dpy gc fgcolor
+    fillRectangle dpy p gc 2 2 196 96
+    printString dpy p gc fontStruc str
+    copyArea dpy p win gc 0 0 200 100 0 0
+    freeGC dpy gc
+    freeFont dpy fontStruc
+    freePixmap dpy p
 
-initError = error "Could not initialize a graphical interface"
+date :: IO String
+date = do
+    t <- toCalendarTime =<< getClockTime
+    return $ calendarTimeToString t
 
-toGLColor :: String -> GL.Color4 GL.GLfloat
-toGLColor hex = GL.Color4 (realToFrac r) (realToFrac g) (realToFrac b) 1
-    where RGB r g b = toSRGB $ sRGB24read hex
-
-draw :: Ptui ()
-draw = do
-    bg <- asks colorbg
-    w <- gets window
-    liftIO $ do
-        (w, h) <- GLFW.getFramebufferSize w
-        GL.viewport GL.$= (GL.Position 0 0, GL.Size (fromIntegral w) (fromIntegral h))
-        GL.clearColor GL.$= toGLColor bg
-        GL.clear [GL.ColorBuffer]
-
-processEvents :: Ptui ()
-processEvents = do
-    q <- gets queue
-    event <- liftIO $ atomically $ tryReadTQueue q
-    case event of
-         Nothing -> pure ()
-         Just e -> processEvent e >> processEvents
-
-processEvent :: Event -> Ptui ()
-processEvent e = liftIO $ print e
+printString :: Display -> Drawable -> GC -> FontStruct -> String -> IO ()
+printString dpy d gc fontst str = do
+    let strLen = textWidth fontst str
+        (_,asc,_,_) = textExtents fontst str
+        valign = (100 + fromIntegral asc) `div` 2
+        remWidth = 200 - strLen
+        offset = remWidth `div` 2
+    fgcolor <- initColor dpy "white"
+    bgcolor <- initColor dpy "blue"
+    setForeground dpy gc fgcolor
+    setBackground dpy gc bgcolor
+    drawImageString dpy d gc offset valign str
 
 loop :: Ptui ()
 loop = do
+    d <- gets display
     w <- gets window
-    draw
-    liftIO $ GLFW.swapBuffers w >> GLFW.waitEvents
-    processEvents
-    shouldClose <- liftIO $ GLFW.windowShouldClose w
-    unless shouldClose loop
+    liftIO $ do
+        drawInWin d w =<< date
+        sync d True
+        allocaXEvent $ \e -> do
+            nextEvent d e
+            ev <- getEvent e
+            putStrLn $ eventName ev
+    loop
