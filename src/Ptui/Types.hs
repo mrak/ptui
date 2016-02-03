@@ -4,7 +4,7 @@ module Ptui.Types where
 
 import Ptui.Events
 import Graphics.X11.Types (Window)
-import Graphics.X11.Xlib.Types (Display, ScreenNumber)
+import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
 import Control.Concurrent.STM (TQueue)
 import Control.Monad.Reader (ReaderT, MonadReader)
 import Control.Monad.State (StateT, MonadState)
@@ -16,6 +16,7 @@ newtype Ptui a = Ptui { run :: ReaderT PtuiSettings (StateT PtuiState IO) a
 data PtuiState = PtuiState { cursorPosition :: (Int, Int)
                            , window :: Window
                            , display :: Display
+                           , screen :: Screen
                            , screenNumber :: ScreenNumber
                            , queue :: TQueue Event
                            }
@@ -40,6 +41,8 @@ data PtuiSettings = PtuiSettings
                   , color13 :: String
                   , color14 :: String
                   , color15 :: String
+                  , fontName :: String
+                  , fontSize :: Int
                   } deriving (Show)
 
 defaultSettings :: PtuiSettings
@@ -62,6 +65,8 @@ defaultSettings = PtuiSettings { cursorc = "#FFFFFF"
                                , color13 = "#AD7FA8"
                                , color14 = "#34E2E2"
                                , color15 = "#FFFFFF"
+                               , fontName = "monospace"
+                               , fontSize = 10
                                }
 
 data Args = Args
