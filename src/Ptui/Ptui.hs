@@ -12,8 +12,9 @@ import Control.Monad.Reader (asks, runReaderT)
 import Control.Monad.State (gets, runStateT)
 import Control.Concurrent
 import Control.Concurrent.STM (newTQueueIO, tryReadTQueue, atomically)
-import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xft as Xft
+import qualified Graphics.X11.Xlib as X
+import qualified Graphics.X11.Xrender as XR
 import qualified Graphics.X11.Xlib.Extras as XE
 import System.Exit (exitSuccess)
 import System.Time
@@ -77,29 +78,18 @@ drawInWin str = do
     liftIO $ do
         bgcolor <- initColor dpy "green"
         fgcolor <- initColor dpy "blue"
-        gc <- X.createGC dpy win
         xftFont <- Xft.xftFontOpen dpy scr fn
+        extents <- Xft.xftTextExtents dpy xftFont "0"
+        let htext = XR.xglyphinfo_height extents - XR.xglyphinfo_y extents
+        let wtext = XR.xglyphinfo_width extents - XR.xglyphinfo_x extents
         xftDraw <- Xft.xftDrawCreate dpy win (X.defaultVisual dpy sn) (X.defaultColormap dpy sn)
-        Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) fg $ \c -> Xft.xftDrawString xftDraw c xftFont 0 0 "X"
-        X.flush dpy
+        X.clearWindow dpy win
+        Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) fg $ \c -> Xft.xftDrawString xftDraw c xftFont 100 100 "Hello, World!"
 
 date :: IO String
 date = do
     t <- toCalendarTime =<< getClockTime
     return $ calendarTimeToString t
-
-printString :: X.Display -> X.Drawable -> X.GC -> X.FontStruct -> String -> IO ()
-printString dpy d gc fontst str = do
-    let strLen = X.textWidth fontst str
-        (_,asc,_,_) = X.textExtents fontst str
-        valign = (100 + fromIntegral asc) `div` 2
-        remWidth = 200 - strLen
-        offset = remWidth `div` 2
-    fgcolor <- initColor dpy "white"
-    bgcolor <- initColor dpy "blue"
-    X.setForeground dpy gc fgcolor
-    X.setBackground dpy gc bgcolor
-    X.drawImageString dpy d gc offset valign str
 
 loop :: Ptui ()
 loop = do
