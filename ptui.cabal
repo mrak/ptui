@@ -18,7 +18,7 @@ executable ptui
   main-is:             Main.hs
   other-modules:       Ptui.Ptui
                      , Ptui.Args
-                     , Ptui.Events
+                     , Ptui.Xutils
                      , Ptui.Settings
                      , Ptui.Types
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N

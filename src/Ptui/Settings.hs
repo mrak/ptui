@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Ptui.Settings (PtuiSettings(..)
-                     , fromINI
+                     , fromConfig
                      , defaultSettings) where
 
 import Ptui.Types
-import Data.Ini
-import Data.Text
-import Data.Either
+import Data.Ini (readIniFile, Ini, lookupValue)
+import Data.Text (unpack, Text)
+import Data.Either (either)
+import System.IO (hPutStrLn, stderr)
+import System.Directory (doesFileExist)
 
 fromINI :: Ini -> PtuiSettings
 fromINI ini = PtuiSettings { cursorc = lookupString ini "colors" "cursor" cursorc
@@ -38,7 +40,12 @@ lookupInt ini section key f = either (const $ f defaultSettings) (read.unpack) (
 lookupString :: Ini -> Text -> Text -> (PtuiSettings -> String) -> String
 lookupString ini section key f = either (const $ f defaultSettings) unpack (lookupValue section key ini)
 
-{-fromEither :: String -> Either String Text -> String-}
-{-fromEither d e = case e of-}
-                      {-Left _ -> d-}
-                      {-Right b -> unpack b-}
+fromConfig :: FilePath -> IO PtuiSettings
+fromConfig fp = do
+    exists <- doesFileExist fp
+    if exists
+       then readIniFile fp >>= pure . either (const defaultSettings) fromINI
+       else warn ("Configuration file " ++ fp ++ " does not exist. Using default settings.") >> pure defaultSettings
+
+warn :: String -> IO ()
+warn = hPutStrLn stderr

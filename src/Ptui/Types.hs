@@ -2,10 +2,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Ptui.Types where
 
-import Ptui.Events
+import Graphics.X11.Xft (XftFont, XftDraw)
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
-import Control.Concurrent.STM (TQueue)
 import Control.Monad.Reader (ReaderT, MonadReader)
 import Control.Monad.State (StateT, MonadState)
 import Control.Monad.IO.Class (MonadIO)
@@ -18,7 +17,11 @@ data PtuiState = PtuiState { cursorPosition :: (Int, Int)
                            , display :: Display
                            , screen :: Screen
                            , screenNumber :: ScreenNumber
-                           , queue :: TQueue Event
+                           , font :: XftFont
+                           , fontHeight :: Int
+                           , fontWidth :: Int
+                           , fontDescent :: Int
+                           , draw :: XftDraw
                            }
 
 data PtuiSettings = PtuiSettings
