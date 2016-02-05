@@ -2,15 +2,25 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Ptui.Types where
 
-import Graphics.X11.Xft (XftFont, XftDraw)
+import Graphics.X11.Xft (XftColor, XftFont, XftDraw)
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
 import Control.Monad.Reader (ReaderT, MonadReader)
 import Control.Monad.State (StateT, MonadState)
 import Control.Monad.IO.Class (MonadIO)
+import Data.Array.IArray (Array)
+import Data.Map.Strict (Map)
 
 newtype Ptui a = Ptui { run :: ReaderT PtuiSettings (StateT PtuiState IO) a
                       } deriving (Functor, Applicative, Monad, MonadIO, MonadReader PtuiSettings, MonadState PtuiState)
+
+data PtuiCell = PtuiCell { glyph :: String
+                         , fg :: String
+                         , bg :: String
+                         , wide :: Bool
+                         }
+
+type PtuiGrid = Array Int (Array Int (Maybe (PtuiCell)))
 
 data PtuiState = PtuiState { cursorPosition :: (Int, Int)
                            , window :: Window
@@ -22,6 +32,8 @@ data PtuiState = PtuiState { cursorPosition :: (Int, Int)
                            , fontWidth :: Int
                            , fontDescent :: Int
                            , draw :: XftDraw
+                           , grid :: PtuiGrid
+                           , colorCache :: Map String XftColor
                            }
 
 data PtuiSettings = PtuiSettings

@@ -6,8 +6,10 @@ import qualified Graphics.X11.Xft as Xft
 import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xrender as XR
 import Control.Monad.Reader (asks)
-import Control.Monad.State (gets)
+import Control.Monad.State (get,gets,put)
 import Control.Monad.Trans (liftIO)
+import Data.Array.IArray (assocs, Array)
+import qualified Data.Map.Strict as M
 
 initPixel :: X.Display -> String -> IO X.Pixel
 initPixel display color = do
@@ -28,6 +30,16 @@ initX settings = do
     X.mapWindow d w
     pure (d,w)
 
+drawGrid :: Ptui ()
+drawGrid = do
+    g <- gets grid
+    mapM_ (drawRow) $ assocs g
+    where
+        drawRow :: (Int, Array Int (Maybe PtuiCell)) -> Ptui ()
+        drawRow (y,a) = mapM_ (drawChar y) $ assocs a
+        drawChar _ (_,Nothing) = pure ()
+        drawChar y (x,Just g) = drawGlyph (x) (y) (fg g ) (bg g) (glyph g)
+
 drawGlyph :: Int -> Int -> String -> String -> String -> Ptui ()
 drawGlyph x y' f b s = do
     let y = y' + 1
@@ -38,8 +50,17 @@ drawGlyph x y' f b s = do
     descent <- gets fontDescent
     dpy <- gets display
     sn <- gets screenNumber
+    ccache <- gets colorCache
+    bgc <- liftIO $ case M.lookup b ccache of
+                            Nothing -> print "alloc" >> Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) b pure
+                            Just c -> pure c
+    fgc <- liftIO $ case M.lookup f ccache of
+                            Nothing -> Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) f pure
+                            Just c -> pure c
+    let ccache' = M.insert b bgc ccache
+    let ccache'' = M.insert f fgc ccache'
+    state <- get
+    put state {colorCache = ccache''}
     liftIO $ do
-        Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) b $ \c ->
-            Xft.xftDrawRect xftDraw c (x * wtext) (y * htext - htext) wtext htext
-        Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) f $ \c ->
-            Xft.xftDrawString xftDraw c xftFont (x * wtext) (y * htext - descent) s
+        Xft.xftDrawRect xftDraw bgc (x * wtext) (y * htext - htext) wtext htext
+        Xft.xftDrawString xftDraw fgc xftFont (x * wtext) (y * htext - descent) s
