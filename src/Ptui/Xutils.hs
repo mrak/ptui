@@ -1,8 +1,9 @@
 module Ptui.Xutils where
 
 import Ptui.Types
+import Ptui.Xft
+import Ptui.ColorCache
 import Data.Bits ((.|.))
-import qualified Graphics.X11.Xft as Xft
 import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xrender as XR
 import Control.Monad.Reader (asks)
@@ -43,24 +44,14 @@ drawGrid = do
 drawGlyph :: Int -> Int -> String -> String -> String -> Ptui ()
 drawGlyph x y' f b s = do
     let y = y' + 1
-    xftDraw <- gets draw
     xftFont <- gets font
     htext <- gets fontHeight
     wtext <- gets fontWidth
     descent <- gets fontDescent
     dpy <- gets display
+    win <- gets window
     sn <- gets screenNumber
-    ccache <- gets colorCache
-    bgc <- liftIO $ case M.lookup b ccache of
-                            Nothing -> print "alloc" >> Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) b pure
-                            Just c -> pure c
-    fgc <- liftIO $ case M.lookup f ccache of
-                            Nothing -> Xft.withXftColorName dpy (X.defaultVisual dpy sn) (X.defaultColormap dpy sn) f pure
-                            Just c -> pure c
-    let ccache' = M.insert b bgc ccache
-    let ccache'' = M.insert f fgc ccache'
-    state <- get
-    put state {colorCache = ccache''}
     liftIO $ do
-        Xft.xftDrawRect xftDraw bgc (x * wtext) (y * htext - htext) wtext htext
-        Xft.xftDrawString xftDraw fgc xftFont (x * wtext) (y * htext - descent) s
+        withDrawingColors dpy win f b $ \draw f' b' -> do
+            drawXftRect draw b' (x * wtext) (y * htext - htext) wtext htext
+            drawXftString draw f' xftFont (x * wtext) (y * htext - descent) s

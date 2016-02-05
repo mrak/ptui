@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Ptui.Types where
 
-import Graphics.X11.Xft (XftColor, XftFont, XftDraw)
+import Ptui.Xft (AXftFont)
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
 import Control.Monad.Reader (ReaderT, MonadReader)
@@ -27,13 +27,11 @@ data PtuiState = PtuiState { cursorPosition :: (Int, Int)
                            , display :: Display
                            , screen :: Screen
                            , screenNumber :: ScreenNumber
-                           , font :: XftFont
+                           , font :: AXftFont
                            , fontHeight :: Int
                            , fontWidth :: Int
                            , fontDescent :: Int
-                           , draw :: XftDraw
                            , grid :: PtuiGrid
-                           , colorCache :: Map String XftColor
                            }
 
 data PtuiSettings = PtuiSettings
