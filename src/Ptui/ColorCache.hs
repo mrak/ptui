@@ -23,6 +23,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad.Trans (MonadIO, liftIO)
 import Control.Exception (SomeException, handle)
 import Graphics.X11.Xlib
+import qualified Data.Map as M (empty, lookup, Map, insert)
 
 data DynPixel = DynPixel Bool Pixel
 
@@ -32,16 +33,16 @@ initColor dpy c = handle black $ initColor' dpy c
     black :: SomeException -> IO DynPixel
     black = const . return $ DynPixel False (blackPixel dpy $ defaultScreen dpy)
 
-type ColorCache = [(String, Color)]
+type ColorCache = M.Map String Color
 {-# NOINLINE colorCache #-}
 colorCache :: IORef ColorCache
-colorCache = unsafePerformIO $ newIORef []
+colorCache = unsafePerformIO $ newIORef M.empty
 
 getCachedColor :: String -> IO (Maybe Color)
-getCachedColor color_name = lookup color_name `fmap` readIORef colorCache
+getCachedColor color_name = M.lookup color_name `fmap` readIORef colorCache
 
 putCachedColor :: String -> Color -> IO ()
-putCachedColor name c_id = modifyIORef colorCache $ \c -> (name, c_id) : c
+putCachedColor name c_id = modifyIORef colorCache $ M.insert name c_id
 
 initColor' :: Display -> String -> IO DynPixel
 initColor' dpy c = do

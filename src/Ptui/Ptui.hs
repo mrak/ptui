@@ -57,9 +57,6 @@ loop = do
     bg <- asks colorfg
     liftIO $ X.clearWindow d w
     drawGrid
-    {-drawGlyph 0 0 fg bg "A"-}
-    {-drawGlyph 1 1 fg bg "|"-}
-    {-drawGlyph 2 2 fg bg "g"-}
     liftIO $ do
         X.sync d True
         X.allocaXEvent $ \e -> do
