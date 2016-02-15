@@ -1,5 +1,6 @@
 module Ptui.State (initState, PtuiState(..)) where
 
+import Ptui.Pt
 import Ptui.Vt
 import Ptui.Settings
 import Ptui.Xft
@@ -7,9 +8,6 @@ import Ptui.Xft
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
 import qualified Graphics.X11.Xlib as X
-import Control.Monad.Reader (ReaderT, MonadReader)
-import Control.Monad.State (StateT, MonadState)
-import Control.Monad.IO.Class (MonadIO)
 import Data.Array.IArray (Array, array)
 import Data.Map.Strict (Map)
 import Data.Bits ((.|.))
