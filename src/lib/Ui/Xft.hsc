@@ -20,29 +20,29 @@
 
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
 
-module Ptui.Xft ( AXftColor
-                , AXftDraw (..)
-                , AXftFont
-                , mallocAXftColor
-                , freeAXftColor
-                , withAXftDraw
-                , drawXftString
-                , drawXftString'
-                , drawBackground
-                , drawXftRect
-                , openAXftFont
-                , closeAXftFont
-                , xftTxtExtents
-                , xftTxtExtents'
-                , xft_ascent
-                , xft_ascent'
-                , xft_descent
-                , xft_descent'
-                , xft_height
-                , xft_height'
-                , xft_max_advance_width
-                , xft_max_advance_width'
-                )
+module Ui.Xft ( AXftColor
+              , AXftDraw (..)
+              , AXftFont
+              , mallocAXftColor
+              , freeAXftColor
+              , withAXftDraw
+              , drawXftString
+              , drawXftString'
+              , drawBackground
+              , drawXftRect
+              , openAXftFont
+              , closeAXftFont
+              , xftTxtExtents
+              , xftTxtExtents'
+              , xft_ascent
+              , xft_ascent'
+              , xft_descent
+              , xft_descent'
+              , xft_height
+              , xft_height'
+              , xft_max_advance_width
+              , xft_max_advance_width'
+              )
 
 where
 

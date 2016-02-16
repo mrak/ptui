@@ -1,11 +1,12 @@
-module Ptui.Xutils where
+module Ui.Xutils where
 
 import Ptui.Ptui
 import Ptui.State
-import Ptui.Vt
+import Pt.Vt
+import Pt.Pt
 import Ptui.Settings
-import Ptui.Xft
-import Ptui.ColorCache
+import Ui.Xft
+import Ui.ColorCache
 import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xrender as XR
 import Control.Monad.Reader (asks)
@@ -22,7 +23,7 @@ drawGrid = do
         drawRow :: (Int, Array Int (Maybe PtuiCell)) -> Ptui ()
         drawRow (y,a) = mapM_ (drawChar y) $ assocs a
         drawChar _ (_,Nothing) = pure ()
-        drawChar y (x,Just g) = drawGlyph (x) (y) (fg g ) (bg g) (glyph g)
+        drawChar y (x,Just g) = drawGlyph (x) (y) (fg g) (bg g) (glyph g)
 
 drawGlyph :: Int -> Int -> String -> String -> String -> Ptui ()
 drawGlyph x y' f b s = do

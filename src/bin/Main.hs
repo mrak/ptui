@@ -1,22 +1,18 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Main where
 
 import Ptui.Ptui
 import Ptui.Args
 import Ptui.Settings
 import Ptui.State
-import Ptui.Vt
-import Ptui.Xutils
-import Ptui.Xft
+import Pt.Vt
+import Ui.Xutils
+import Ui.Xft
 import Control.Monad.Trans (liftIO)
-import Control.Monad.Reader (asks, runReaderT)
-import Control.Monad.State (gets, runStateT)
+import Control.Monad.Reader (asks)
+import Control.Monad.State (gets)
 import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xlib.Extras as XE
 import System.Exit (exitSuccess)
-import qualified Data.Ini as I (readIniFile)
-import Data.Array.IArray (array)
-import Data.Map.Strict (Map, fromList)
 
 main :: IO ()
 main = getArgs >>= ptui

@@ -4,8 +4,8 @@ module Ptui.Ptui (Ptui, runPtui) where
 import Ptui.Args
 import Ptui.Settings
 import Ptui.State
-import Ptui.Vt
-import Ptui.Xft
+import Pt.Vt
+import Ui.Xft
 import Control.Monad.Reader (ReaderT, MonadReader, runReaderT)
 import Control.Monad.State (StateT, MonadState, runStateT)
 import Control.Monad.IO.Class (MonadIO)

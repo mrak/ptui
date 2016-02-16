@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE PatternSynonyms #-}
-module Ptui.StateMachine where
+module Pt.StateMachine where
 
 import Data.ByteString.Lazy.Char8
 

@@ -14,9 +14,9 @@
 --
 ------------------------------------------------------------------------------
 
-module Ptui.ColorCache(withColors, withDrawingColors) where
+module Ui.ColorCache(withColors, withDrawingColors) where
 
-import Ptui.Xft
+import Ui.Xft
 
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)

@@ -1,9 +1,9 @@
 module Ptui.State (initState, PtuiState(..)) where
 
-import Ptui.Pt
-import Ptui.Vt
+import Pt.Pt
+import Pt.Vt
 import Ptui.Settings
-import Ptui.Xft
+import Ui.Xft
 
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)

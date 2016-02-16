@@ -1,4 +1,4 @@
-module Ptui.Pt where
+module Pt.Pt where
 
 import System.Process
 import System.Posix.Terminal (openPseudoTerminal)
