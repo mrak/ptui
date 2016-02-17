@@ -6,7 +6,7 @@ module Pt.StateMachine where
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Char (isDigit)
 import Data.List (foldl',uncons)
-import Data.Maybe (catMaybes,fromMaybe)
+import Data.Maybe (mapMaybe,fromMaybe)
 import Text.Read (readMaybe)
 
 data State = Q0
@@ -23,6 +23,7 @@ data State = Q0
            | QSGR48r
            | QSGR48g
            | QSGR48b
+           deriving Show
 
 data Color = Color256 Int
            | Trucolor Int Int Int
@@ -84,11 +85,11 @@ transduce _ t (b:>bs) = transduce Q0 t bs
 
 makeCUP :: [String] -> Command
 makeCUP [] = CUP 1 1
-makeCUP (r:[]) = CUP (fromMaybe 1 $ readMaybe r) 1
+makeCUP [r] = CUP (fromMaybe 1 $ readMaybe r) 1
 makeCUP (r:c:_) = CUP (fromMaybe 1 $ readMaybe r) (fromMaybe 1 $ readMaybe c)
 
 makeSGR :: [String] -> Command
-makeSGR = SGR . transduceSGR QSGR0 [] . catMaybes . map (readMaybe :: String -> Maybe Int)
+makeSGR = SGR . transduceSGR QSGR0 [] . mapMaybe (readMaybe :: String -> Maybe Int)
     where transduceSGR _ _ [] = []
           transduceSGR QSGR0 l (0:xs) = Reset : transduceSGR QSGR0 l xs
           transduceSGR QSGR0 l (1:xs) = Bold True : transduceSGR QSGR0 l xs
@@ -149,13 +150,14 @@ makeSGR = SGR . transduceSGR QSGR0 [] . catMaybes . map (readMaybe :: String -> 
           transduceSGR QSGR38 l (2:xs) = transduceSGR QSGR38r l xs
           transduceSGR QSGR38c l (x:xs) = Foreground (Color256 x) : transduceSGR QSGR0 l xs
           transduceSGR QSGR38r _ (r:xs) = transduceSGR QSGR38g [r] xs
-          transduceSGR QSGR38g (r:[]) (g:xs) = transduceSGR QSGR38b [r,g] xs
-          transduceSGR QSGR38b (r:g:[]) (b:xs) = Foreground (Trucolor r g b) : transduceSGR QSGR0 [] xs
+          transduceSGR QSGR38g [r] (g:xs) = transduceSGR QSGR38b [r,g] xs
+          transduceSGR QSGR38b [r,g] (b:xs) = Foreground (Trucolor r g b) : transduceSGR QSGR0 [] xs
 
           transduceSGR QSGR48 l (5:xs) = transduceSGR QSGR48c l xs
           transduceSGR QSGR48 l (2:xs) = transduceSGR QSGR48r l xs
           transduceSGR QSGR48c l (x:xs) = Background (Color256 x) : transduceSGR QSGR0 l xs
           transduceSGR QSGR48r _ (r:xs) = transduceSGR QSGR48g [r] xs
-          transduceSGR QSGR48g (r:[]) (g:xs) = transduceSGR QSGR48b [r,g] xs
-          transduceSGR QSGR48b (r:g:[]) (b:xs) = Background (Trucolor r g b) : transduceSGR QSGR0 [] xs
+          transduceSGR QSGR48g [r] (g:xs) = transduceSGR QSGR48b [r,g] xs
+          transduceSGR QSGR48b [r,g] (b:xs) = Background (Trucolor r g b) : transduceSGR QSGR0 [] xs
+
           transduceSGR _ _ (_:xs) = transduceSGR QSGR0 [] xs
