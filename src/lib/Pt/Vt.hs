@@ -8,5 +8,5 @@ input :: IO.Handle -> IO B.ByteString
 input h = IO.hSetBinaryMode h True >> IO.hSetBuffering h IO.NoBuffering >> B.hGetContents h
 
 go :: IO ()
-go = transduce Q0 ("",[]) <$> input IO.stdin >>= mapM_ print
+go = runFSM <$> input IO.stdin >>= mapM_ print
 

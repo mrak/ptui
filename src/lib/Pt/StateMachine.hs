@@ -9,8 +9,13 @@ import Data.List (foldl',uncons)
 import Data.Maybe (mapMaybe,fromMaybe)
 import Text.Read (readMaybe)
 
+data CX = C0 | C1
+
 data State = Q0
+           | QSS2
+           | QSS3
            | QESC
+           | QESCSP
            | QCSI
            | QSGR0
            | QSGR38
@@ -46,6 +51,20 @@ data SGRAttr = Reset
 
 data Command = Noop
              | Output Char
+             | BEL
+             | BS
+             | HT
+             | LF
+             | VT
+             | FF
+             | CR
+             | ENQ
+             | IND
+             | NEL
+             | HTS
+             | RI
+             | SS2 Char
+             | SS3 Char
              | SGR [SGRAttr]
              | CUU Int
              | CUD Int
@@ -61,27 +80,58 @@ data Command = Noop
 pattern b :> bs <- (B.uncons -> Just (b,bs))
 pattern Empty   <- (B.uncons -> Nothing)
 
-transduce :: State -> (String,[String]) -> B.ByteString -> [Command]
-transduce _ _ Empty         = []
-transduce Q0 t ('\x1b':>bs) = transduce QESC t bs
-transduce Q0 t (b:>bs)      = Output b : transduce Q0 t bs
+runFSM :: B.ByteString -> [Command]
+runFSM = transduce Q0 C0 ("","",[])
 
-transduce QESC _ ('[':>bs) = transduce QCSI ("",[]) bs
+transduce :: State -> CX -> (String,String,[String]) -> B.ByteString -> [Command]
+transduce _ _ _ Empty         = []
 
-transduce QCSI (p,ps) ('A':>bs) = CUU (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('B':>bs) = CUD (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('C':>bs) = CUF (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('D':>bs) = CUB (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('E':>bs) = CNL (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('F':>bs) = CPL (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('G':>bs) = CHA (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('H':>bs) = makeCUP (ps++[p]) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('I':>bs) = CHT (fromMaybe 1 $ readMaybe p) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) ('m':>bs) = makeSGR (ps++[p]) : transduce Q0 ("",[]) bs
-transduce QCSI (p,ps) (';':>bs) = transduce QCSI ("",ps++[p]) bs
-transduce QCSI (p,ps) (b:>bs) | isDigit b = transduce QCSI (p++[b],ps) bs
-                              | otherwise = transduce Q0 (p,ps) bs
-transduce _ t (b:>bs) = transduce Q0 t bs
+transduce Q0 cs t ('\x1b':>bs) = transduce QESC cs t bs
+transduce Q0 cs t ('\x07':>bs) = BEL : transduce Q0 cs t bs
+transduce Q0 cs t ('\x08':>bs) = BS : transduce Q0 cs t bs
+transduce Q0 cs t ('\x09':>bs) = HT : transduce Q0 cs t bs
+transduce Q0 cs t ('\x0a':>bs) = LF : transduce Q0 cs t bs
+transduce Q0 cs t ('\x0b':>bs) = VT : transduce Q0 cs t bs
+transduce Q0 cs t ('\x0c':>bs) = FF : transduce Q0 cs t bs
+transduce Q0 cs t ('\x0d':>bs) = CR : transduce Q0 cs t bs
+transduce Q0 C1 t ('\x84':>bs) = IND : transduce Q0 C1 t bs
+transduce Q0 C1 t ('\x85':>bs) = NEL : transduce Q0 C1 t bs
+transduce Q0 C1 t ('\x88':>bs) = HTS : transduce Q0 C1 t bs
+transduce Q0 C1 t ('\x8d':>bs) = RI : transduce Q0 C1 t bs
+transduce Q0 C1 t ('\x8e':>bs) = transduce QSS2 C1 t bs
+transduce Q0 C1 t ('\x8f':>bs) = transduce QSS3 C1 t bs
+transduce Q0 C1 t ('\x9b':>bs) = transduce QCSI C1 t bs
+transduce Q0 cs t (b:>bs)      = Output b : transduce Q0 cs t bs
+
+transduce QSS2 cs t (b:>bs) = SS2 b : transduce Q0 cs t bs
+transduce QSS3 cs t (b:>bs) = SS3 b : transduce Q0 cs t bs
+
+transduce QESC cs t ('D':>bs) = IND : transduce Q0 cs t bs
+transduce QESC cs t ('E':>bs) = NEL : transduce Q0 cs t bs
+transduce QESC cs t ('H':>bs) = HTS : transduce Q0 cs t bs
+transduce QESC cs t ('M':>bs) = RI : transduce Q0 cs t bs
+transduce QESC cs t ('N':>bs) = transduce QSS2 cs t bs
+transduce QESC cs t ('O':>bs) = transduce QSS3 cs t bs
+transduce QESC cs _ ('[':>bs) = transduce QCSI cs ("","",[]) bs
+transduce QESC cs t (' ':>bs) = transduce QESCSP cs t bs
+
+transduce QESCSP _ t ('F':>bs) = transduce Q0 C0 t bs
+transduce QESCSP _ t ('G':>bs) = transduce Q0 C1 t bs
+
+transduce QCSI cs t@(p,x,xs) ('A':>bs) = CUU (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('B':>bs) = CUD (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('C':>bs) = CUF (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('D':>bs) = CUB (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('E':>bs) = CNL (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('F':>bs) = CPL (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('G':>bs) = CHA (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('H':>bs) = makeCUP (xs++[x]) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('I':>bs) = CHT (fromMaybe 1 $ readMaybe x) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) ('m':>bs) = makeSGR (xs++[x]) : transduce Q0 cs t bs
+transduce QCSI cs t@(p,x,xs) (';':>bs) = transduce QCSI cs (p,"",xs++[x]) bs
+transduce QCSI cs t@(p,x,xs) (b:>bs) | isDigit b = transduce QCSI cs (p,x++[b],xs) bs
+                                     | otherwise = transduce Q0 cs t bs
+transduce _ cs t (b:>bs) = transduce Q0 cs t bs
 
 makeCUP :: [String] -> Command
 makeCUP [] = CUP 1 1
