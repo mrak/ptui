@@ -34,7 +34,7 @@ data State = Q0
 data Color = Color256 Int
            | Trucolor Int Int Int
            | Default
-           deriving Show
+           deriving (Show,Eq)
 
 data SGRAttr = Reset
              | Bold Bool
@@ -48,7 +48,7 @@ data SGRAttr = Reset
              | Invisible Bool
              | Strikethrough Bool
              | DoubleUnderline
-             deriving Show
+             deriving (Show,Eq)
 
 data Command = Noop
              | Output Char
@@ -76,13 +76,16 @@ data Command = Noop
              | CHA Int
              | CHT Int
              | CUP Int Int
-             deriving Show
+             deriving (Show,Eq)
 
 pattern b :> bs <- (B.uncons -> Just (b,bs))
 pattern Empty   <- (B.uncons -> Nothing)
 
 runFSM :: B.ByteString -> [Command]
 runFSM = transduce Q0 C0 ("","",[])
+
+runFSMC1 :: B.ByteString -> [Command]
+runFSMC1 = transduce Q0 C1 ("","",[])
 
 transduce :: State -> CX -> (String,String,[String]) -> B.ByteString -> [Command]
 transduce _ _ _ Empty         = []
