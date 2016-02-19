@@ -4,6 +4,7 @@
 module Pt.StateMachine where
 
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ByteString.Lazy.UTF8 as U
 import Data.Char (isDigit)
 import Data.List (foldl',uncons)
 import Data.Maybe (mapMaybe,fromMaybe)
@@ -101,7 +102,7 @@ transduce Q0 C1 t ('\x8d':>bs) = RI : transduce Q0 C1 t bs
 transduce Q0 C1 t ('\x8e':>bs) = transduce QSS2 C1 t bs
 transduce Q0 C1 t ('\x8f':>bs) = transduce QSS3 C1 t bs
 transduce Q0 C1 t ('\x9b':>bs) = transduce QCSI C1 t bs
-transduce Q0 cs t (b:>bs)      = Output b : transduce Q0 cs t bs
+transduce Q0 cs t bs           = maybe [] (\(b,bs') -> Output b : transduce Q0 cs t bs') (U.uncons bs)
 
 transduce QSS2 cs t (b:>bs) = SS2 b : transduce Q0 cs t bs
 transduce QSS3 cs t (b:>bs) = SS3 b : transduce Q0 cs t bs

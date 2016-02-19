@@ -9,4 +9,3 @@ input h = IO.hSetBinaryMode h True >> IO.hSetBuffering h IO.NoBuffering >> B.hGe
 
 go :: IO ()
 go = runFSM <$> input IO.stdin >>= mapM_ print
-
