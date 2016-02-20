@@ -32,7 +32,7 @@ data State = Q0
            deriving Show
 
 data Color = Color256 Int
-           | Trucolor Int Int Int
+           | Truecolor Int Int Int
            | Default
            deriving (Show,Eq)
 
@@ -205,13 +205,13 @@ makeSGR = SGR . transduceSGR QSGR0 [] . mapMaybe (readMaybe :: String -> Maybe I
           transduceSGR QSGR38c l (x:xs) = Foreground (Color256 x) : transduceSGR QSGR0 l xs
           transduceSGR QSGR38r _ (r:xs) = transduceSGR QSGR38g [r] xs
           transduceSGR QSGR38g [r] (g:xs) = transduceSGR QSGR38b [r,g] xs
-          transduceSGR QSGR38b [r,g] (b:xs) = Foreground (Trucolor r g b) : transduceSGR QSGR0 [] xs
+          transduceSGR QSGR38b [r,g] (b:xs) = Foreground (Truecolor r g b) : transduceSGR QSGR0 [] xs
 
           transduceSGR QSGR48 l (5:xs) = transduceSGR QSGR48c l xs
           transduceSGR QSGR48 l (2:xs) = transduceSGR QSGR48r l xs
           transduceSGR QSGR48c l (x:xs) = Background (Color256 x) : transduceSGR QSGR0 l xs
           transduceSGR QSGR48r _ (r:xs) = transduceSGR QSGR48g [r] xs
           transduceSGR QSGR48g [r] (g:xs) = transduceSGR QSGR48b [r,g] xs
-          transduceSGR QSGR48b [r,g] (b:xs) = Background (Trucolor r g b) : transduceSGR QSGR0 [] xs
+          transduceSGR QSGR48b [r,g] (b:xs) = Background (Truecolor r g b) : transduceSGR QSGR0 [] xs
 
           transduceSGR _ _ (_:xs) = transduceSGR QSGR0 [] xs

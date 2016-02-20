@@ -31,4 +31,7 @@ c1 = "C1 (S8C1T)" ~: test [ "IND" ~: [IND] ~=? runFSMC1 "\x84"
                           , "NEL" ~: [NEL] ~=? runFSMC1 "\x85"
                           , "HTS" ~: [HTS] ~=? runFSMC1 "\x88"
                           , "RI" ~: [RI] ~=? runFSMC1 "\x8d"
+                          , "SS2" ~: [SS2 'a'] ~=? runFSMC1 (pack ['\x8e','a'])
+                          , "SS3" ~: [SS3 'a'] ~=? runFSMC1 (pack ['\x8f','a'])
+                          , "CSI SGR" ~: [SGR [Foreground (Truecolor 1 2 3)]] ~=? runFSMC1 (B.cons '\x9b' "38;2;1;2;3m")
                           ]
