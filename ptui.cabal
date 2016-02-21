@@ -17,13 +17,12 @@ library
   hs-source-dirs:      src/lib
   exposed-modules:     Ptui.Ptui
                      , Ptui.Args
-                     , Ptui.Settings
+                     , Ptui.Config
                      , Ptui.State
                      , Ui.ColorCache
                      , Ui.Xutils
                      , Ui.Xft
                      , Pt.Pt
-                     , Pt.Vt
                      , Pt.StateMachine
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base >= 4.7 && < 5
