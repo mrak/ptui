@@ -3,7 +3,10 @@ module Pt.Pt where
 import Ptui.Config (term)
 import Pt.StateMachine
 
+import Control.Concurrent.MVar (newEmptyMVar,takeMVar,putMVar)
+import Control.Concurrent (forkIO)
 import System.Process
+import System.Posix.Process (forkProcess,createSession)
 import System.Posix.Terminal (openPseudoTerminal)
 import System.Posix.Types (Fd)
 import System.Environment (getEnvironment, lookupEnv)
@@ -21,29 +24,49 @@ data PtuiCell = PtuiCell { glyph :: String
 
 type PtuiGrid = Array Int (Array Int (Maybe PtuiCell))
 
-input :: IO.Handle -> IO B.ByteString
-input h = IO.hSetBinaryMode h True >> IO.hSetBuffering h IO.NoBuffering >> B.hGetContents h
+input :: Fd -> IO B.ByteString
+input fd = unbuffer fd >>= B.hGetContents
+
+unbuffer :: Fd -> IO IO.Handle
+unbuffer fd = do
+    h <- fdToHandle fd
+    IO.hSetBinaryMode h True
+    IO.hSetBuffering h IO.NoBuffering
+    pure h
 
 pt :: IO ()
-pt = spawnShell >>= fdToHandle >>= input >>= pure . runFSM >>= mapM_ print
-
-spawnShell :: IO Fd
-spawnShell = fromMaybe "/bin/sh" <$> lookupEnv "SHELL" >>= flip spawnCmd []
-
-spawnCmd :: String -> [String] -> IO Fd
-spawnCmd cmd args = do
+pt = do
     (master,slave) <- openPseudoTerminal
-    handle <- fdToHandle slave
+    mvar <- newEmptyMVar
+    forkIO $ input master >>= pure . runFSM >>= mapM_ printCmd >> putMVar mvar ()
+    unbuffer slave >>= spawnCmd "/bin/fish" ["-c","isatty"]
+    {-unbuffer slave >>= spawnShell-}
+    takeMVar mvar
+    where printCmd (Output c) = putChar c
+          printCmd c = print c
+
+spawnShell :: IO.Handle -> IO ()
+spawnShell h = fromMaybe "/bin/sh" <$> lookupEnv "SHELL" >>= \s -> spawnCmd s [] h
+
+spawnCmd :: String -> [String] -> IO.Handle -> IO ()
+spawnCmd cmd args handle = do
     environment <- getEnvironment
-    (pin,pout,perr,ph) <- createProcess CreateProcess {
-        cmdspec = RawCommand cmd args,
-        cwd = Nothing,
-        env = Just $ ("TERM",term):environment,
-        std_in = UseHandle handle,
-        std_out = UseHandle handle,
-        std_err = UseHandle handle,
-        close_fds = True,
-        create_group = True,
-        delegate_ctlc = False
-    }
-    pure master
+    home <- lookupEnv "HOME"
+    createProcess CreateProcess
+        { cmdspec = RawCommand cmd args
+        , cwd = home
+        , env = Just $ ("TERM",term):environment
+        , std_in = UseHandle handle
+        , std_out = UseHandle handle
+        , std_err = UseHandle handle
+        , close_fds = True
+        , create_group = True
+        , new_session = True
+        , delegate_ctlc = True
+        , child_group = Nothing
+        , child_user = Nothing
+        -- windows, ignored
+        , detach_console = False
+        , create_new_console = False
+        }
+    pure ()

@@ -11,9 +11,13 @@ import Control.Monad.State (gets)
 import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xlib.Extras as XE
 import System.Exit (exitSuccess)
+import Control.Concurrent (forkIO)
 
 main :: IO ()
-main = getArgs >>= ptui
+main = do
+    forkIO pt
+    getArgs >>= ptui
+
 
 ptui :: Args -> IO ()
 ptui a = runPtui loop a >> exitSuccess
