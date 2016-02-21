@@ -1,5 +1,6 @@
 module Pt.Pt where
 
+import Ptui.Config (term)
 import Pt.StateMachine
 
 import System.Process
@@ -23,8 +24,8 @@ type PtuiGrid = Array Int (Array Int (Maybe PtuiCell))
 input :: IO.Handle -> IO B.ByteString
 input h = IO.hSetBinaryMode h True >> IO.hSetBuffering h IO.NoBuffering >> B.hGetContents h
 
-go :: IO ()
-go = runFSM <$> input IO.stdin >>= mapM_ print
+pt :: IO ()
+pt = spawnShell >>= fdToHandle >>= input >>= pure . runFSM >>= mapM_ print
 
 spawnShell :: IO Fd
 spawnShell = fromMaybe "/bin/sh" <$> lookupEnv "SHELL" >>= flip spawnCmd []
@@ -37,11 +38,11 @@ spawnCmd cmd args = do
     (pin,pout,perr,ph) <- createProcess CreateProcess {
         cmdspec = RawCommand cmd args,
         cwd = Nothing,
-        env = Just $ ("TERM","ptui-256color"):environment,
+        env = Just $ ("TERM",term):environment,
         std_in = UseHandle handle,
         std_out = UseHandle handle,
         std_err = UseHandle handle,
-        close_fds = False,
+        close_fds = True,
         create_group = True,
         delegate_ctlc = False
     }

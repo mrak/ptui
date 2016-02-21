@@ -3,6 +3,7 @@ module Ptui.Config ( PtuiConfig(..)
                      , PtuiColors(..)
                      , PtuiWindow(..)
                      , fromConfig
+                     , term
                      , defaultConfig) where
 
 import Data.Ini (readIniFile, Ini, lookupValue, keys)
@@ -15,6 +16,8 @@ import Control.Monad (guard)
 import System.IO (hPutStrLn, stderr)
 import System.Directory (doesFileExist)
 import Text.Read (readMaybe)
+
+term = "ptui-256color"
 
 data PtuiColors = PtuiColors { foreground :: String
                              , background :: String
@@ -48,7 +51,7 @@ defaultConfig = PtuiConfig { colors = defaultColors
 
 defaultWindow :: PtuiWindow
 defaultWindow = PtuiWindow { title = "ptui"
-                           , clazz = "ptui-256color"
+                           , clazz = term
                            }
 
 windowFromIni :: Ini -> PtuiWindow
