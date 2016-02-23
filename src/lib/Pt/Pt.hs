@@ -2,15 +2,20 @@ module Pt.Pt where
 
 import Ptui.Config (term)
 import Pt.StateMachine
+import Pt.Ioctl (setControllingTerminal)
 
-import Control.Concurrent.MVar (newEmptyMVar,takeMVar,putMVar)
 import Control.Concurrent (forkIO)
+import Control.Monad (when)
 import System.Process
+import System.Exit
+import System.Posix.User
+import System.Posix.Signals as Signals
 import System.Posix.Process (forkProcess,createSession)
+import System.Posix.Process.Internals
 import System.Posix.Terminal (openPseudoTerminal)
-import System.Posix.Types (Fd)
-import System.Environment (getEnvironment, lookupEnv)
-import System.Posix.IO.ByteString (fdToHandle)
+import System.Posix.Types (Fd,ProcessID)
+import System.Environment
+import System.Posix.IO.ByteString
 import Data.Array.IArray (Array)
 import Data.Maybe (fromMaybe)
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -37,32 +42,64 @@ unbuffer fd = do
 pt :: IO ()
 pt = do
     (master,slave) <- openPseudoTerminal
-    mvar <- newEmptyMVar
-    forkIO $ input master >>= pure . runFSM >>= mapM_ printCmd >> putMVar mvar ()
-    unbuffer slave >>= spawnCmd "/bin/fish" ["-c","isatty"]
-    {-unbuffer slave >>= spawnShell-}
-    takeMVar mvar
+    forkIO $ input master >>= pure . runFSM >>= mapM_ printCmd >> print "done"
+    pid <- spawnShell slave
+    installHandler sigCHLD (CatchInfo $ sigchld pid) Nothing
+    pure ()
     where printCmd (Output c) = putChar c
           printCmd c = print c
 
-spawnShell :: IO.Handle -> IO ()
-spawnShell h = fromMaybe "/bin/sh" <$> lookupEnv "SHELL" >>= \s -> spawnCmd s [] h
+sigchld :: ProcessID -> SignalInfo -> IO ()
+sigchld pid si = case siginfoSpecific si of
+                      NoSignalSpecificInfo -> pure ()
+                      sci -> when (siginfoPid sci == pid) exit
+                          where exit = case siginfoStatus sci of
+                                            Exited c -> exitWith c
+                                            _ -> exitFailure
 
-spawnCmd :: String -> [String] -> IO.Handle -> IO ()
-spawnCmd cmd args handle = do
-    environment <- getEnvironment
+spawnShell :: Fd -> IO ProcessID
+spawnShell fd = do
+    sh <- fromMaybe "/bin/sh" <$> lookupEnv "SHELL"
+    spawnCmd sh [] fd
+
+spawnCmd :: String -> [String] -> Fd -> IO ProcessID
+spawnCmd cmd args fd = forkProcess $ do
+    createSession
+    dupTo fd stdInput
+    dupTo fd stdOutput
+    dupTo fd stdError
+    setControllingTerminal fd
+    closeFd fd
+
+    udata <- getRealUserID >>= getUserEntryForID
     home <- lookupEnv "HOME"
+    sh <- fromMaybe "/bin/sh" <$> lookupEnv "SHELL"
+    unsetEnv "COLUMNS"
+    unsetEnv "LINES"
+    unsetEnv "TERMCAP"
+    setEnv "USER" $ userName udata
+    setEnv "SHELL" sh
+    setEnv "TERM" term
+    setEnv "LOGNAME" $ userName udata
+
+    installHandler sigCHLD Signals.Default Nothing
+    installHandler sigHUP Signals.Default Nothing
+    installHandler sigINT Signals.Default Nothing
+    installHandler sigQUIT Signals.Default Nothing
+    installHandler sigTERM Signals.Default Nothing
+    installHandler sigALRM Signals.Default Nothing
+
     createProcess CreateProcess
         { cmdspec = RawCommand cmd args
         , cwd = home
-        , env = Just $ ("TERM",term):environment
-        , std_in = UseHandle handle
-        , std_out = UseHandle handle
-        , std_err = UseHandle handle
+        , env = Nothing
+        , std_in = Inherit
+        , std_out = Inherit
+        , std_err = Inherit
         , close_fds = True
-        , create_group = True
-        , new_session = True
-        , delegate_ctlc = True
+        , create_group = False
+        , new_session = False
+        , delegate_ctlc = False
         , child_group = Nothing
         , child_user = Nothing
         -- windows, ignored

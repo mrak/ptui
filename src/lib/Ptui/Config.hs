@@ -18,6 +18,7 @@ import System.Directory (doesFileExist)
 import Text.Read (readMaybe)
 
 term = "ptui-256color"
+{-term = "xterm-256color"-}
 
 data PtuiColors = PtuiColors { foreground :: String
                              , background :: String

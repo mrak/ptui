@@ -14,9 +14,7 @@ import System.Exit (exitSuccess)
 import Control.Concurrent (forkIO)
 
 main :: IO ()
-main = do
-    forkIO pt
-    getArgs >>= ptui
+main = pt >> getArgs >>= ptui
 
 
 ptui :: Args -> IO ()

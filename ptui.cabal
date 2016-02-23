@@ -23,6 +23,7 @@ library
                      , Ui.Xutils
                      , Ui.Xft
                      , Pt.Pt
+                     , Pt.Ioctl
                      , Pt.StateMachine
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base >= 4.7 && < 5
