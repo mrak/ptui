@@ -40,7 +40,6 @@ library
                      , X11-xft
                      , containers
                      , utf8-string
-                     , process
                      , unix
                      , bytestring
   default-language:    Haskell2010

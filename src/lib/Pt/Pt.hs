@@ -6,7 +6,6 @@ import Pt.Ioctl (setControllingTerminal)
 
 import Control.Concurrent (forkIO)
 import Control.Monad (when)
-import System.Process
 import System.Exit
 import System.Posix.User
 import System.Posix.Signals as Signals
