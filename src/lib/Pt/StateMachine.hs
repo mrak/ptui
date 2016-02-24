@@ -30,6 +30,8 @@ data Q_ = Q0
           | QESCSP
           | QCSI
           | QDCS
+          | QOSC
+          | QOSC2
           | QSGR0
           | QSGR38
           | QSGR38c
@@ -89,6 +91,7 @@ data Command = Noop
              | CHT Int
              | CUP Int Int
              | SetCharset CharacterSetSlot CharacterSet
+             | SetIconTitle String
              deriving Show
 
 pattern b :> bs <- (B.uncons -> Just (b,bs))
@@ -131,7 +134,15 @@ transduce QESC cs t ('N':>bs) = transduce QSS2 cs t bs
 transduce QESC cs t ('O':>bs) = transduce QSS3 cs t bs
 transduce QESC cs _ ('[':>bs) = transduce QCSI cs ("","",[]) bs
 transduce QESC cs _ ('(':>bs) = transduce QDCS cs ("(","",[]) bs
+transduce QESC cs _ (']':>bs) = transduce QOSC cs ("","",[]) bs
 transduce QESC cs t (' ':>bs) = transduce QESCSP cs t bs
+
+transduce QOSC cs t@(p,x,xs) (';':>bs) = transduce QOSC2 cs (p,"",xs++[x]) bs
+transduce QOSC cs t@(p,x,xs) (b:>bs) | isDigit b = transduce QOSC cs (p,x++[b],xs) bs
+                                     | otherwise = transduce Q0 cs t bs
+transduce QOSC2 cs t@(p,x,xs) ('\a':>bs) = makeOSC (xs++[x]) : transduce Q0 cs t bs
+transduce QOSC2 C1 t@(p,x,xs) ('\x9c':>bs) = makeOSC (xs++[x]) : transduce Q0 C1 t bs
+transduce QOSC2 cs t@(p,x,xs) bs = maybe [] (\(b,bs') -> transduce QOSC2 cs (p,x++[b],xs) bs') (U.uncons bs)
 
 transduce QDCS cs t@(p,x,xs) ('0':>bs) = makeCharsetDesignation p Special : transduce Q0 cs t bs
 transduce QDCS cs t@(p,x,xs) ('A':>bs) = makeCharsetDesignation p UK : transduce Q0 cs t bs
@@ -159,6 +170,12 @@ makeCUP :: [String] -> Command
 makeCUP [] = CUP 1 1
 makeCUP [r] = CUP (fromMaybe 1 $ readMaybe r) 1
 makeCUP (r:c:_) = CUP (fromMaybe 1 $ readMaybe r) (fromMaybe 1 $ readMaybe c)
+
+makeOSC :: [String] -> Command
+makeOSC [] = Noop
+makeOSC [_] = Noop
+makeOSC ("0":t:_) = SetIconTitle t
+makeOSC _ = Noop
 
 makeCharsetDesignation :: String -> CharacterSet -> Command
 makeCharsetDesignation g cs = case g of
