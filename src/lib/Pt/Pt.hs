@@ -10,7 +10,7 @@ import System.Process
 import System.Exit
 import System.Posix.User
 import System.Posix.Signals as Signals
-import System.Posix.Process (forkProcess,createSession)
+import System.Posix.Process
 import System.Posix.Process.Internals
 import System.Posix.Terminal (openPseudoTerminal)
 import System.Posix.Types (Fd,ProcessID)
@@ -36,7 +36,7 @@ unbuffer :: Fd -> IO IO.Handle
 unbuffer fd = do
     h <- fdToHandle fd
     IO.hSetBinaryMode h True
-    IO.hSetBuffering h IO.NoBuffering
+    IO.hSetBuffering h $ IO.BlockBuffering Nothing
     pure h
 
 pt :: IO ()
@@ -54,7 +54,7 @@ sigchld pid si = case siginfoSpecific si of
                       NoSignalSpecificInfo -> pure ()
                       sci -> when (siginfoPid sci == pid) exit
                           where exit = case siginfoStatus sci of
-                                            Exited c -> exitWith c
+                                            Exited c -> exitImmediately c
                                             _ -> exitFailure
 
 spawnShell :: Fd -> IO ProcessID
@@ -89,21 +89,5 @@ spawnCmd cmd args fd = forkProcess $ do
     installHandler sigTERM Signals.Default Nothing
     installHandler sigALRM Signals.Default Nothing
 
-    createProcess CreateProcess
-        { cmdspec = RawCommand cmd args
-        , cwd = home
-        , env = Nothing
-        , std_in = Inherit
-        , std_out = Inherit
-        , std_err = Inherit
-        , close_fds = True
-        , create_group = False
-        , new_session = False
-        , delegate_ctlc = False
-        , child_group = Nothing
-        , child_user = Nothing
-        -- windows, ignored
-        , detach_console = False
-        , create_new_console = False
-        }
+    executeFile cmd True args Nothing
     pure ()

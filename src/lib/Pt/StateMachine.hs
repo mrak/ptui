@@ -10,7 +10,18 @@ import Data.List (foldl',uncons)
 import Data.Maybe (mapMaybe,fromMaybe)
 import Text.Read (readMaybe)
 
-data CX = C0 | C1
+data CX = C0 | C1 deriving Show
+
+data CharacterSetSlot = G0
+                      | G1
+                      | G2
+                      | G3
+                      deriving Show
+
+data CharacterSet = Special
+                  | UK
+                  | USASCII
+                  deriving Show
 
 data State = Q0
            | QSS2
@@ -18,6 +29,7 @@ data State = Q0
            | QESC
            | QESCSP
            | QCSI
+           | QDCS
            | QSGR0
            | QSGR38
            | QSGR38c
@@ -76,7 +88,8 @@ data Command = Noop
              | CHA Int
              | CHT Int
              | CUP Int Int
-             deriving (Show,Eq)
+             | SetCharset CharacterSetSlot CharacterSet
+             deriving Show
 
 pattern b :> bs <- (B.uncons -> Just (b,bs))
 pattern Empty   <- (B.uncons -> Nothing)
@@ -117,7 +130,12 @@ transduce QESC cs t ('M':>bs) = RI : transduce Q0 cs t bs
 transduce QESC cs t ('N':>bs) = transduce QSS2 cs t bs
 transduce QESC cs t ('O':>bs) = transduce QSS3 cs t bs
 transduce QESC cs _ ('[':>bs) = transduce QCSI cs ("","",[]) bs
+transduce QESC cs _ ('(':>bs) = transduce QDCS cs ("(","",[]) bs
 transduce QESC cs t (' ':>bs) = transduce QESCSP cs t bs
+
+transduce QDCS cs t@(p,x,xs) ('0':>bs) = makeCharsetDesignation p Special : transduce Q0 cs t bs
+transduce QDCS cs t@(p,x,xs) ('A':>bs) = makeCharsetDesignation p UK : transduce Q0 cs t bs
+transduce QDCS cs t@(p,x,xs) ('B':>bs) = makeCharsetDesignation p USASCII : transduce Q0 cs t bs
 
 transduce QESCSP _ t ('F':>bs) = transduce Q0 C0 t bs
 transduce QESCSP _ t ('G':>bs) = transduce Q0 C1 t bs
@@ -141,6 +159,17 @@ makeCUP :: [String] -> Command
 makeCUP [] = CUP 1 1
 makeCUP [r] = CUP (fromMaybe 1 $ readMaybe r) 1
 makeCUP (r:c:_) = CUP (fromMaybe 1 $ readMaybe r) (fromMaybe 1 $ readMaybe c)
+
+makeCharsetDesignation :: String -> CharacterSet -> Command
+makeCharsetDesignation g cs = case g of
+                                  "(" -> SetCharset G0 cs
+                                  ")" -> SetCharset G1 cs
+                                  "*" -> SetCharset G2 cs
+                                  "+" -> SetCharset G3 cs
+                                  "-" -> SetCharset G1 cs
+                                  "." -> SetCharset G2 cs
+                                  "/" -> SetCharset G3 cs
+                                  _   -> Noop
 
 makeSGR :: [String] -> Command
 makeSGR = SGR . transduceSGR QSGR0 [] . mapMaybe (readMaybe :: String -> Maybe Int)
