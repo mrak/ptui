@@ -23,25 +23,25 @@ data CharacterSet = Special
                   | USASCII
                   deriving Show
 
-data State = Q0
-           | QSS2
-           | QSS3
-           | QESC
-           | QESCSP
-           | QCSI
-           | QDCS
-           | QSGR0
-           | QSGR38
-           | QSGR38c
-           | QSGR38r
-           | QSGR38g
-           | QSGR38b
-           | QSGR48
-           | QSGR48c
-           | QSGR48r
-           | QSGR48g
-           | QSGR48b
-           deriving Show
+data Q_ = Q0
+          | QSS2
+          | QSS3
+          | QESC
+          | QESCSP
+          | QCSI
+          | QDCS
+          | QSGR0
+          | QSGR38
+          | QSGR38c
+          | QSGR38r
+          | QSGR38g
+          | QSGR38b
+          | QSGR48
+          | QSGR48c
+          | QSGR48r
+          | QSGR48g
+          | QSGR48b
+          deriving Show
 
 data Color = Color256 Int
            | Truecolor Int Int Int
@@ -100,7 +100,7 @@ runFSM = transduce Q0 C0 ("","",[])
 runFSMC1 :: B.ByteString -> [Command]
 runFSMC1 = transduce Q0 C1 ("","",[])
 
-transduce :: State -> CX -> (String,String,[String]) -> B.ByteString -> [Command]
+transduce :: Q_ -> CX -> (String,String,[String]) -> B.ByteString -> [Command]
 transduce _ _ _ Empty         = []
 
 transduce Q0 cs t ('\x1b':>bs) = transduce QESC cs t bs
