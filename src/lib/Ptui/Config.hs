@@ -1,10 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Ptui.Config ( PtuiConfig(..)
-                     , PtuiColors(..)
-                     , PtuiWindow(..)
-                     , fromConfig
-                     , term
-                     , defaultConfig) where
+module Ptui.Config ( fromConfig
+                   , term
+                   , defaultConfig) where
 
 import Ptui.Types
 
@@ -35,15 +32,15 @@ defaultConfig = PtuiConfig { ccolors = defaultColors
                            , cwindow = defaultWindow
                            }
 
-defaultWindow :: PtuiWindow
-defaultWindow = PtuiWindow { title = "ptui"
-                           , clazz = term
-                           }
+defaultWindow :: UiWindow
+defaultWindow = UiWindow { title = "ptui"
+                         , clazz = term
+                         }
 
-windowFromIni :: Ini -> PtuiWindow
-windowFromIni ini = PtuiWindow { title = lookupString ini "window" "title" (title.cwindow)
-                               , clazz = lookupString ini "window" "class" (clazz.cwindow)
-                               }
+windowFromIni :: Ini -> UiWindow
+windowFromIni ini = UiWindow { title = lookupString ini "window" "title" (title.cwindow)
+                             , clazz = lookupString ini "window" "class" (clazz.cwindow)
+                             }
 
 colorsFromIni :: Ini -> PtuiColors
 colorsFromIni ini = PtuiColors { background = lookupString ini "colors" "background" (background.ccolors)

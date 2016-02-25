@@ -14,18 +14,18 @@ import System.Exit (exitSuccess)
 import Control.Concurrent (forkIO)
 
 main :: IO ()
-main = pt >> getArgs >>= runPtui ptui >> exitSuccess
+main = getArgs >>= runPtui pt ui >> exitSuccess
 
 
-ptui :: Ptui ()
-ptui = do
+ui :: Ui ()
+ui = do
     d <- gets $ display.x11
     w <- gets $ window.x11
     liftIO $ X.clearWindow d w
-    loop
+    uiLoop
 
-loop :: Ptui ()
-loop = do
+uiLoop :: Ui ()
+uiLoop = do
     d <- gets $ display.x11
     fg <- gets $ background.colors
     bg <- gets $ foreground.colors
@@ -36,4 +36,4 @@ loop = do
             X.nextEvent d e
             ev <- XE.getEvent e
             putStrLn $ XE.eventName ev
-    loop
+    uiLoop

@@ -7,6 +7,7 @@ import Pt.Ioctl (setControllingTerminal,setTerminalSize)
 
 import Control.Concurrent (forkIO)
 import Control.Monad (when)
+import Control.Monad.Trans (liftIO)
 import System.Exit
 import System.Posix.User
 import System.Posix.Signals as Signals
@@ -30,8 +31,8 @@ unbuffer fd = do
     IO.hSetBuffering h $ IO.BlockBuffering Nothing
     pure h
 
-pt :: IO ()
-pt = do
+pt :: Pt ()
+pt = liftIO $ do
     (master,slave) <- openPseudoTerminal
     forkIO $ input master >>= pure . runFSM >>= mapM_ printCmd >> print "done"
     pid <- spawnShell slave

@@ -17,25 +17,30 @@ data CLIArgs = CLIArgs
     { cliConfig :: Maybe FilePath
     }
 
-newtype Ptui a = Ptui { run :: StateT PtuiState IO a
-                      } deriving (Functor, Applicative, Monad, MonadIO, MonadState PtuiState)
+newtype Ui a = Ui { runUi :: StateT UiState IO a
+                  } deriving (Functor, Applicative, Monad, MonadIO, MonadState UiState)
 
-data PtuiX11 = PtuiX11
+newtype Pt a = Pt { runPt :: StateT PtState IO a
+                  } deriving (Functor, Applicative, Monad, MonadIO, MonadState PtState)
+
+data PtState = PtState {}
+
+data UiX11 = UiX11
                { display :: Display
                , window :: Window
                , screen :: Screen
                , screenNumber :: ScreenNumber
                }
 
-data PtuiState = PtuiState { cursorPosition :: (Int, Int)
-                           , x11 :: PtuiX11
-                           , colors :: PtuiColors
-                           , font :: AXftFont
-                           , fontHeight :: Int
-                           , fontWidth :: Int
-                           , fontDescent :: Int
-                           , grid :: PtuiGrid
-                           }
+data UiState = UiState { cursorPosition :: (Int, Int)
+                       , x11 :: UiX11
+                       , colors :: PtuiColors
+                       , font :: AXftFont
+                       , fontHeight :: Int
+                       , fontWidth :: Int
+                       , fontDescent :: Int
+                       , grid :: PtuiGrid
+                       }
 
 
 
@@ -45,7 +50,7 @@ data PtuiColors = PtuiColors { foreground :: String
                              , table :: Array Int String
                              }
 
-data PtuiWindow = PtuiWindow
+data UiWindow = UiWindow
                   { title :: String
                   , clazz :: String
                   }
@@ -53,7 +58,7 @@ data PtuiWindow = PtuiWindow
 data PtuiConfig = PtuiConfig
                   { ccolors :: PtuiColors
                   , cfont :: String
-                  , cwindow :: PtuiWindow
+                  , cwindow :: UiWindow
                   }
 
 

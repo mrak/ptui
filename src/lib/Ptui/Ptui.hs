@@ -1,4 +1,4 @@
-module Ptui.Ptui (Ptui, runPtui) where
+module Ptui.Ptui (runPtui) where
 
 import Ptui.Args
 import Ptui.Config (fromConfig)
@@ -12,14 +12,17 @@ import qualified Graphics.X11.Xlib as X
 import Data.Array.IArray (Array, array)
 import Data.Map.Strict (Map)
 import Data.Bits ((.|.))
+import Control.Concurrent (forkIO)
+import Control.Monad (void)
 
-runPtui :: Ptui p -> Args -> IO (p, PtuiState)
-runPtui p a = do
+runPtui :: Pt p -> Ui u -> Args -> IO (u, UiState)
+runPtui p u a = do
     settings <- fromConfig (config a)
-    state <- initState settings
-    runStateT (run p) state
+    uiState <- initState settings
+    forkIO $ void $ runStateT (runPt p) PtState {}
+    runStateT (runUi u) uiState
 
-initState :: PtuiConfig -> IO PtuiState
+initState :: PtuiConfig -> IO UiState
 initState settings = do
     (d, w) <- initX settings
     let sn = X.defaultScreen d
@@ -32,20 +35,20 @@ initState settings = do
     let rows = quot (fromIntegral wh - (2 * fromIntegral wb)) fh
     let rowCells = array (0, cols) [(i,Just PtuiCell {glyph="X",fg="red",bg="white",wide=False})|i<-[0..cols]]
     let g = array (0, rows) [(i,rowCells)|i<-[0..rows]]
-    let x11State = PtuiX11 { display = d
-                           , window = w
-                           , screenNumber = sn
-                           , screen = X.defaultScreenOfDisplay d
-                           }
-    pure PtuiState { cursorPosition = (0,0)
-                   , x11 = x11State
-                   , colors = ccolors settings
-                   , font = xftFont
-                   , fontHeight = fh
-                   , fontWidth = fw
-                   , fontDescent = fd
-                   , grid = g
-                   }
+    let x11State = UiX11 { display = d
+                         , window = w
+                         , screenNumber = sn
+                         , screen = X.defaultScreenOfDisplay d
+                         }
+    pure UiState { cursorPosition = (0,0)
+                 , x11 = x11State
+                 , colors = ccolors settings
+                 , font = xftFont
+                 , fontHeight = fh
+                 , fontWidth = fw
+                 , fontDescent = fd
+                 , grid = g
+                 }
 
 initX :: PtuiConfig -> IO (Display, Window)
 initX settings = do
