@@ -1,21 +1,13 @@
-module Main where
+module Ui.Ui where
 
 import Ptui.Types
-import Ptui.Ptui
-import Ptui.Args
-import Pt.Pt
 import Ui.Xutils
 import Ui.Xft
 import Control.Monad.Trans (liftIO)
 import Control.Monad.State (gets)
 import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xlib.Extras as XE
-import System.Exit (exitSuccess)
 import Control.Concurrent (forkIO)
-
-main :: IO ()
-main = getArgs >>= runPtui pt ui >> exitSuccess
-
 
 ui :: Ui ()
 ui = do
