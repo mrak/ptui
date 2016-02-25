@@ -1,8 +1,8 @@
 module Main where
 
+import Ptui.Types
 import Ptui.Ptui
 import Ptui.Args
-import Ptui.State
 import Pt.Pt
 import Ui.Xutils
 import Ui.Xft
@@ -14,19 +14,21 @@ import System.Exit (exitSuccess)
 import Control.Concurrent (forkIO)
 
 main :: IO ()
-main = pt >> getArgs >>= ptui
+main = pt >> getArgs >>= runPtui ptui >> exitSuccess
 
 
-ptui :: Args -> IO ()
-ptui a = runPtui loop a >> exitSuccess
+ptui :: Ptui ()
+ptui = do
+    d <- gets $ display.x11
+    w <- gets $ window.x11
+    liftIO $ X.clearWindow d w
+    loop
 
 loop :: Ptui ()
 loop = do
     d <- gets $ display.x11
-    w <- gets $ windowId.x11
     fg <- gets $ background.colors
     bg <- gets $ foreground.colors
-    liftIO $ X.clearWindow d w
     drawGrid
     liftIO $ do
         X.sync d True

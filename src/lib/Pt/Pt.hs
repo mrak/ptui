@@ -1,8 +1,9 @@
 module Pt.Pt where
 
+import Ptui.Types
 import Ptui.Config (term)
 import Pt.StateMachine
-import Pt.Ioctl (setControllingTerminal)
+import Pt.Ioctl (setControllingTerminal,setTerminalSize)
 
 import Control.Concurrent (forkIO)
 import Control.Monad (when)
@@ -15,18 +16,9 @@ import System.Posix.Terminal (openPseudoTerminal)
 import System.Posix.Types (Fd,ProcessID)
 import System.Environment
 import System.Posix.IO.ByteString
-import Data.Array.IArray (Array)
 import Data.Maybe (fromMaybe)
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified System.IO as IO
-
-data PtuiCell = PtuiCell { glyph :: String
-                         , fg :: String
-                         , bg :: String
-                         , wide :: Bool
-                         } deriving Show
-
-type PtuiGrid = Array Int (Array Int (Maybe PtuiCell))
 
 input :: Fd -> IO B.ByteString
 input fd = unbuffer fd >>= B.hGetContents
@@ -44,7 +36,7 @@ pt = do
     forkIO $ input master >>= pure . runFSM >>= mapM_ printCmd >> print "done"
     pid <- spawnShell slave
     installHandler sigCHLD (CatchInfo $ sigchld pid) Nothing
-    pure ()
+    setTerminalSize master 54 64 120 120
     where printCmd (Output c) = putChar c
           printCmd c = print c
 

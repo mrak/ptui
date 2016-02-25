@@ -6,8 +6,10 @@ module Ptui.Config ( PtuiConfig(..)
                      , term
                      , defaultConfig) where
 
+import Ptui.Types
+
 import Data.Ini (readIniFile, Ini, lookupValue, keys)
-import Data.Array.IArray (array,Array,(//))
+import Data.Array.IArray (array,(//))
 import Data.Text as T (unpack, Text, drop, take)
 import Data.Text.Read (decimal)
 import Data.Either (either,isRight)
@@ -17,14 +19,8 @@ import System.IO (hPutStrLn, stderr)
 import System.Directory (doesFileExist)
 import Text.Read (readMaybe)
 
-term = "ptui-256color"
-{-term = "xterm-256color"-}
-
-data PtuiColors = PtuiColors { foreground :: String
-                             , background :: String
-                             , cursor :: String
-                             , table :: Array Int String
-                             }
+{-term = "ptui-256color"-}
+term = "xterm-256color"
 
 defaultColors :: PtuiColors
 defaultColors = PtuiColors { foreground = "#D3D7CF"
@@ -33,21 +29,10 @@ defaultColors = PtuiColors { foreground = "#D3D7CF"
                            , table = array (0,255) defaultColortable
                            }
 
-data PtuiWindow = PtuiWindow
-                  { title :: String
-                  , clazz :: String
-                  }
-
-data PtuiConfig = PtuiConfig
-                  { colors :: PtuiColors
-                  , font :: String
-                  , window :: PtuiWindow
-                  }
-
 defaultConfig :: PtuiConfig
-defaultConfig = PtuiConfig { colors = defaultColors
-                           , font = "monospace-10"
-                           , window = defaultWindow
+defaultConfig = PtuiConfig { ccolors = defaultColors
+                           , cfont = "monospace-10"
+                           , cwindow = defaultWindow
                            }
 
 defaultWindow :: PtuiWindow
@@ -56,14 +41,14 @@ defaultWindow = PtuiWindow { title = "ptui"
                            }
 
 windowFromIni :: Ini -> PtuiWindow
-windowFromIni ini = PtuiWindow { title = lookupString ini "window" "title" (title.window)
-                               , clazz = lookupString ini "window" "class" (clazz.window)
+windowFromIni ini = PtuiWindow { title = lookupString ini "window" "title" (title.cwindow)
+                               , clazz = lookupString ini "window" "class" (clazz.cwindow)
                                }
 
 colorsFromIni :: Ini -> PtuiColors
-colorsFromIni ini = PtuiColors { background = lookupString ini "colors" "background" (background.colors)
-                               , foreground = lookupString ini "colors" "foreground" (foreground.colors)
-                               , cursor = lookupString ini "colors" "cursor" (cursor.colors)
+colorsFromIni ini = PtuiColors { background = lookupString ini "colors" "background" (background.ccolors)
+                               , foreground = lookupString ini "colors" "foreground" (foreground.ccolors)
+                               , cursor = lookupString ini "colors" "cursor" (cursor.ccolors)
                                , table = table defaultColors // overrides
                                }
     where overrides = either (const []) toAssocList $ keys "colors" ini
@@ -79,9 +64,9 @@ colorsFromIni ini = PtuiColors { background = lookupString ini "colors" "backgro
               pure (i', v')
 
 fromINI :: Ini -> PtuiConfig
-fromINI ini = PtuiConfig { colors = colorsFromIni ini
-                         , font = lookupString ini "font" "name" font
-                         , window = windowFromIni ini
+fromINI ini = PtuiConfig { ccolors = colorsFromIni ini
+                         , cfont = lookupString ini "font" "name" cfont
+                         , cwindow = windowFromIni ini
                          }
 
 lookupInt :: Ini -> Text -> Text -> (PtuiConfig -> Int) -> Int

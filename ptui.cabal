@@ -18,7 +18,7 @@ library
   exposed-modules:     Ptui.Ptui
                      , Ptui.Args
                      , Ptui.Config
-                     , Ptui.State
+                     , Ptui.Types
                      , Ui.ColorCache
                      , Ui.Xutils
                      , Ui.Xft

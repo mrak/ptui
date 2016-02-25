@@ -1,16 +1,10 @@
 module Ptui.Args where
 
+import Ptui.Types
+
 import Options.Applicative
 import System.Environment.XDG.BaseDir
 import Data.Maybe
-
-data Args = Args
-    { config :: FilePath
-    }
-
-data CLIArgs = CLIArgs
-    { cliConfig :: Maybe FilePath
-    }
 
 configArg :: Parser (Maybe String)
 configArg = optional $ strOption ( long "config"

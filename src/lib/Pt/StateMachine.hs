@@ -3,6 +3,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 module Pt.StateMachine where
 
+import Ptui.Types
+
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Lazy.UTF8 as U
 import Data.Char (isDigit)
@@ -11,17 +13,6 @@ import Data.Maybe (mapMaybe,fromMaybe)
 import Text.Read (readMaybe)
 
 data CX = C0 | C1 deriving Show
-
-data CharacterSetSlot = G0
-                      | G1
-                      | G2
-                      | G3
-                      deriving Show
-
-data CharacterSet = Special
-                  | UK
-                  | USASCII
-                  deriving Show
 
 data Q_ = Q0
           | QSS2
@@ -44,55 +35,6 @@ data Q_ = Q0
           | QSGR48g
           | QSGR48b
           deriving Show
-
-data Color = Color256 Int
-           | Truecolor Int Int Int
-           | Default
-           deriving (Show,Eq)
-
-data SGRAttr = Reset
-             | Bold Bool
-             | Faint
-             | Blink Bool
-             | Underscore Bool
-             | Italic Bool
-             | Reverse Bool
-             | Foreground Color
-             | Background Color
-             | Invisible Bool
-             | Strikethrough Bool
-             | DoubleUnderline
-             deriving (Show,Eq)
-
-data Command = Noop
-             | Output Char
-             | BEL
-             | BS
-             | HT
-             | LF
-             | VT
-             | FF
-             | CR
-             | ENQ
-             | IND
-             | NEL
-             | HTS
-             | RI
-             | SS2 Char
-             | SS3 Char
-             | SGR [SGRAttr]
-             | CUU Int
-             | CUD Int
-             | CUF Int
-             | CUB Int
-             | CNL Int
-             | CPL Int
-             | CHA Int
-             | CHT Int
-             | CUP Int Int
-             | SetCharset CharacterSetSlot CharacterSet
-             | SetIconTitle String
-             deriving Show
 
 pattern b :> bs <- (B.uncons -> Just (b,bs))
 pattern Empty   <- (B.uncons -> Nothing)

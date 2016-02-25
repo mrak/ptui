@@ -1,7 +1,7 @@
 module Ui.Xutils where
 
+import Ptui.Types
 import Ptui.Ptui
-import Ptui.State
 import Pt.Pt
 import Ui.Xft
 import Ui.ColorCache
@@ -25,12 +25,12 @@ drawGrid = do
 drawGlyph :: Int -> Int -> String -> String -> String -> Ptui ()
 drawGlyph x y' f b s = do
     let y = y' + 1
-    xftFont <- gets Ptui.State.font
+    xftFont <- gets font
     htext <- gets fontHeight
     wtext <- gets fontWidth
     descent <- gets fontDescent
     dpy <- gets $ display.x11
-    win <- gets $ windowId.x11
+    win <- gets $ window.x11
     sn <- gets $ screenNumber.x11
     liftIO $ withDrawingColors dpy win f b $ \draw f' b' -> do
                 drawXftRect draw b' (x * wtext) (y * htext - htext) wtext htext
