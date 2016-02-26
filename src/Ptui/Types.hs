@@ -8,6 +8,7 @@ import Control.Monad.State (StateT,MonadState)
 import Control.Monad.IO.Class (MonadIO)
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
+import Control.Concurrent.STM.TChan (TChan)
 
 data Args = Args
     { config :: FilePath
@@ -17,30 +18,26 @@ data CLIArgs = CLIArgs
     { cliConfig :: Maybe FilePath
     }
 
-newtype Ui a = Ui { runUi :: StateT UiState IO a
-                  } deriving (Functor, Applicative, Monad, MonadIO, MonadState UiState)
+newtype Ptui a = Ptui { run :: StateT PtuiState IO a
+                      } deriving (Functor, Applicative, Monad, MonadIO, MonadState PtuiState)
 
-newtype Pt a = Pt { runPt :: StateT PtState IO a
-                  } deriving (Functor, Applicative, Monad, MonadIO, MonadState PtState)
+data PtuiX11 = PtuiX11
+             { display :: Display
+             , window :: Window
+             , screen :: Screen
+             , screenNumber :: ScreenNumber
+             }
 
-data PtState = PtState {}
-
-data UiX11 = UiX11
-               { display :: Display
-               , window :: Window
-               , screen :: Screen
-               , screenNumber :: ScreenNumber
-               }
-
-data UiState = UiState { cursorPosition :: (Int, Int)
-                       , x11 :: UiX11
-                       , colors :: PtuiColors
-                       , font :: AXftFont
-                       , fontHeight :: Int
-                       , fontWidth :: Int
-                       , fontDescent :: Int
-                       , grid :: PtuiGrid
-                       }
+data PtuiState = PtuiState { cursorPosition :: (Int, Int)
+                           , x11 :: PtuiX11
+                           , colors :: PtuiColors
+                           , font :: AXftFont
+                           , fontHeight :: Int
+                           , fontWidth :: Int
+                           , fontDescent :: Int
+                           , grid :: PtuiGrid
+                           , channel :: TChan Command
+                           }
 
 
 
@@ -50,16 +47,16 @@ data PtuiColors = PtuiColors { foreground :: String
                              , table :: Array Int String
                              }
 
-data UiWindow = UiWindow
+data PtuiWindow = PtuiWindow
                   { title :: String
                   , clazz :: String
                   }
 
 data PtuiConfig = PtuiConfig
-                  { ccolors :: PtuiColors
-                  , cfont :: String
-                  , cwindow :: UiWindow
-                  }
+                { ccolors :: PtuiColors
+                , cfont :: String
+                , cwindow :: PtuiWindow
+                }
 
 
 data PtuiCell = PtuiCell { glyph :: String

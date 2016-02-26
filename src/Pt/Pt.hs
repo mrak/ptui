@@ -31,8 +31,8 @@ unbuffer fd = do
     IO.hSetBuffering h $ IO.BlockBuffering Nothing
     pure h
 
-pt :: Pt ()
-pt = liftIO $ do
+pt :: IO ()
+pt = do
     (master,slave) <- openPseudoTerminal
     forkIO $ input master >>= pure . runFSM >>= mapM_ printCmd >> print "done"
     pid <- spawnShell slave

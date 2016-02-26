@@ -32,13 +32,13 @@ defaultConfig = PtuiConfig { ccolors = defaultColors
                            , cwindow = defaultWindow
                            }
 
-defaultWindow :: UiWindow
-defaultWindow = UiWindow { title = "ptui"
-                         , clazz = term
-                         }
+defaultWindow :: PtuiWindow
+defaultWindow = PtuiWindow { title = "ptui"
+                           , clazz = term
+                           }
 
-windowFromIni :: Ini -> UiWindow
-windowFromIni ini = UiWindow { title = lookupString ini "window" "title" (title.cwindow)
+windowFromIni :: Ini -> PtuiWindow
+windowFromIni ini = PtuiWindow { title = lookupString ini "window" "title" (title.cwindow)
                              , clazz = lookupString ini "window" "class" (clazz.cwindow)
                              }
 

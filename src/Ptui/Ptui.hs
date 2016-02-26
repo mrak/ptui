@@ -13,16 +13,17 @@ import Data.Array.IArray (Array, array)
 import Data.Map.Strict (Map)
 import Data.Bits ((.|.))
 import Control.Concurrent (forkIO)
+import Control.Concurrent.STM.TChan
 import Control.Monad (void)
+import Control.Monad.STM (atomically)
 
-runPtui :: Pt p -> Ui u -> Args -> IO (u, UiState)
-runPtui p u a = do
+runPtui :: Ptui p -> Args -> IO (p, PtuiState)
+runPtui p a = do
     settings <- fromConfig (config a)
-    uiState <- initState settings
-    forkIO $ void $ runStateT (runPt p) PtState {}
-    runStateT (runUi u) uiState
+    state <- initState settings
+    runStateT (run p) state
 
-initState :: PtuiConfig -> IO UiState
+initState :: PtuiConfig -> IO PtuiState
 initState settings = do
     (d, w) <- initX settings
     let sn = X.defaultScreen d
@@ -30,17 +31,18 @@ initState settings = do
     fh <- xft_height xftFont
     fw <- xft_max_advance_width xftFont
     fd <- xft_descent xftFont
+    chan <- atomically newTChan
     (_, wx, wy, ww, wh, wb, _) <- X.getGeometry d w
     let cols = quot (fromIntegral ww - (2 * fromIntegral wb)) fw
     let rows = quot (fromIntegral wh - (2 * fromIntegral wb)) fh
     let rowCells = array (0, cols) [(i,Just PtuiCell {glyph="X",fg="red",bg="white",wide=False})|i<-[0..cols]]
     let g = array (0, rows) [(i,rowCells)|i<-[0..rows]]
-    let x11State = UiX11 { display = d
+    let x11State = PtuiX11 { display = d
                          , window = w
                          , screenNumber = sn
                          , screen = X.defaultScreenOfDisplay d
                          }
-    pure UiState { cursorPosition = (0,0)
+    pure PtuiState { cursorPosition = (0,0)
                  , x11 = x11State
                  , colors = ccolors settings
                  , font = xftFont
@@ -48,6 +50,7 @@ initState settings = do
                  , fontWidth = fw
                  , fontDescent = fd
                  , grid = g
+                 , channel = chan
                  }
 
 initX :: PtuiConfig -> IO (Display, Window)
