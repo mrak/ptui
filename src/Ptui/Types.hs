@@ -1,14 +1,16 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Ptui.Types where
 
 import Ui.Xft (AXftFont)
 
+import Lens.Simple
 import Data.Array.IArray (Array)
 import Control.Monad.State (StateT,MonadState)
 import Control.Monad.IO.Class (MonadIO)
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
-import Control.Concurrent.STM.TChan (TChan)
+import Control.Concurrent.STM (TQueue)
 
 data Args = Args
     { config :: FilePath
@@ -18,54 +20,43 @@ data CLIArgs = CLIArgs
     { cliConfig :: Maybe FilePath
     }
 
-newtype Ptui a = Ptui { run :: StateT PtuiState IO a
-                      } deriving (Functor, Applicative, Monad, MonadIO, MonadState PtuiState)
-
-data PtuiX11 = PtuiX11
-             { display :: Display
-             , window :: Window
-             , screen :: Screen
-             , screenNumber :: ScreenNumber
-             }
-
-data PtuiState = PtuiState { cursorPosition :: (Int, Int)
-                           , x11 :: PtuiX11
-                           , colors :: PtuiColors
-                           , font :: AXftFont
-                           , fontHeight :: Int
-                           , fontWidth :: Int
-                           , fontDescent :: Int
-                           , grid :: PtuiGrid
-                           , channel :: TChan Command
-                           }
-
-
-
-data PtuiColors = PtuiColors { foreground :: String
-                             , background :: String
-                             , cursor :: String
-                             , table :: Array Int String
-                             }
-
-data PtuiWindow = PtuiWindow
-                  { title :: String
-                  , clazz :: String
-                  }
-
-data PtuiConfig = PtuiConfig
-                { ccolors :: PtuiColors
-                , cfont :: String
-                , cwindow :: PtuiWindow
-                }
-
-
-data PtuiCell = PtuiCell { glyph :: String
-                         , fg :: String
-                         , bg :: String
-                         , wide :: Bool
+data PtuiCell = PtuiCell { _glyph :: String
+                         , _fg :: String
+                         , _bg :: String
+                         , _wide :: Bool
                          } deriving Show
 
 type PtuiGrid = Array Int (Array Int (Maybe PtuiCell))
+
+data PtuiColors = PtuiColors { _foreground :: String
+                             , _background :: String
+                             , _cursor :: String
+                             , _table :: Array Int String
+                             }
+
+data PtuiX11 = PtuiX11
+             { _display :: Display
+             , _window :: Window
+             , _screen :: Screen
+             , _screenNumber :: ScreenNumber
+             }
+
+data PtuiWindow = PtuiWindow
+                  { _title :: String
+                  , _clazz :: String
+                  }
+
+data PtuiConfig = PtuiConfig
+                { _ccolors :: PtuiColors
+                , _cfont :: String
+                , _cwindow :: PtuiWindow
+                }
+
+
+newtype Ptui a = Ptui { run :: StateT PtuiState IO a
+                      } deriving (Functor, Applicative, Monad, MonadIO, MonadState PtuiState)
+
+
 
 data CharacterSetSlot = G0
                       | G1
@@ -125,5 +116,23 @@ data Command = Noop
              | CUP Int Int
              | SetCharset CharacterSetSlot CharacterSet
              | SetIconTitle String
+             | X11Event String
              deriving Show
 
+data PtuiState = PtuiState { _cursorPosition :: (Int, Int)
+                           , _x11 :: PtuiX11
+                           , _colors :: PtuiColors
+                           , _font :: AXftFont
+                           , _fontHeight :: Int
+                           , _fontWidth :: Int
+                           , _fontDescent :: Int
+                           , _grid :: PtuiGrid
+                           , _channel :: TQueue Command
+                           }
+
+makeLenses ''PtuiCell
+makeLenses ''PtuiState
+makeLenses ''PtuiColors
+makeLenses ''PtuiWindow
+makeLenses ''PtuiConfig
+makeLenses ''PtuiX11

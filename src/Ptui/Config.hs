@@ -20,33 +20,33 @@ import Text.Read (readMaybe)
 term = "xterm-256color"
 
 defaultColors :: PtuiColors
-defaultColors = PtuiColors { foreground = "#D3D7CF"
-                           , background = "#262626"
-                           , cursor = "#FFFFFF"
-                           , table = array (0,255) defaultColortable
+defaultColors = PtuiColors { _foreground = "#D3D7CF"
+                           , _background = "#262626"
+                           , _cursor = "#FFFFFF"
+                           , _table = array (0,255) defaultColortable
                            }
 
 defaultConfig :: PtuiConfig
-defaultConfig = PtuiConfig { ccolors = defaultColors
-                           , cfont = "monospace-10"
-                           , cwindow = defaultWindow
+defaultConfig = PtuiConfig { _ccolors = defaultColors
+                           , _cfont = "monospace-10"
+                           , _cwindow = defaultWindow
                            }
 
 defaultWindow :: PtuiWindow
-defaultWindow = PtuiWindow { title = "ptui"
-                           , clazz = term
+defaultWindow = PtuiWindow { _title = "ptui"
+                           , _clazz = term
                            }
 
 windowFromIni :: Ini -> PtuiWindow
-windowFromIni ini = PtuiWindow { title = lookupString ini "window" "title" (title.cwindow)
-                             , clazz = lookupString ini "window" "class" (clazz.cwindow)
-                             }
+windowFromIni ini = PtuiWindow { _title = lookupString ini "window" "title" (_title._cwindow)
+                               , _clazz = lookupString ini "window" "class" (_clazz._cwindow)
+                               }
 
 colorsFromIni :: Ini -> PtuiColors
-colorsFromIni ini = PtuiColors { background = lookupString ini "colors" "background" (background.ccolors)
-                               , foreground = lookupString ini "colors" "foreground" (foreground.ccolors)
-                               , cursor = lookupString ini "colors" "cursor" (cursor.ccolors)
-                               , table = table defaultColors // overrides
+colorsFromIni ini = PtuiColors { _background = lookupString ini "colors" "background" (_background._ccolors)
+                               , _foreground = lookupString ini "colors" "foreground" (_foreground._ccolors)
+                               , _cursor = lookupString ini "colors" "cursor" (_cursor._ccolors)
+                               , _table = _table defaultColors // overrides
                                }
     where overrides = either (const []) toAssocList $ keys "colors" ini
           toAssocList cs = do
@@ -61,9 +61,9 @@ colorsFromIni ini = PtuiColors { background = lookupString ini "colors" "backgro
               pure (i', v')
 
 fromINI :: Ini -> PtuiConfig
-fromINI ini = PtuiConfig { ccolors = colorsFromIni ini
-                         , cfont = lookupString ini "font" "name" cfont
-                         , cwindow = windowFromIni ini
+fromINI ini = PtuiConfig { _ccolors = colorsFromIni ini
+                         , _cfont = lookupString ini "font" "name" _cfont
+                         , _cwindow = windowFromIni ini
                          }
 
 lookupInt :: Ini -> Text -> Text -> (PtuiConfig -> Int) -> Int
