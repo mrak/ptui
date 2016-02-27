@@ -28,6 +28,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified System.IO as IO
 import System.Posix.Terminal (openPseudoTerminal)
+import Data.Bits ((.|.))
 
 main :: IO ()
 main = getArgs >>= runPtui ptui >> exitSuccess
@@ -41,7 +42,7 @@ ptui = do
     liftIO $ do
         (master,slave) <- openPseudoTerminal
         forkIO $ pt master chan
-        forkIO $ ui d chan
+        forkIO $ ui w chan
         pid <- spawnShell slave
         installHandler sigCHLD (CatchInfo $ sigchld pid) Nothing
         setTerminalSize master 54 64 120 120
@@ -56,13 +57,14 @@ uiLoop :: Ptui ()
 uiLoop = do
     c <- use channel
     liftIO $ atomically (readTQueue c) >>= printCmd
-    drawGrid
     uiLoop
 
-ui :: X.Display -> TQueue Command -> IO ()
-ui d c = forever $ do
-    X.sync d True
-    X.allocaXEvent $ \e -> do
+ui :: X.Window -> TQueue Command -> IO ()
+ui w c = do
+    d <- X.openDisplay ""
+    X.selectInput d w (X.exposureMask .|. X.buttonPressMask)
+    X.allocaXEvent $ \e -> forever $ do
+        X.sync d True
         X.nextEvent d e
         ev <- XE.getEvent e
         atomically $ writeTQueue c $ X11Event $ XE.eventName ev
