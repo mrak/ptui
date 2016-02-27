@@ -46,6 +46,13 @@ data PtuiWindow = PtuiWindow
                   , _clazz :: String
                   }
 
+data PtuiFont = PtuiFont
+              { _face :: AXftFont
+              , _height :: Int
+              , _width :: Int
+              , _descent :: Int
+              }
+
 data PtuiConfig = PtuiConfig
                 { _ccolors :: PtuiColors
                 , _cfont :: String
@@ -122,14 +129,12 @@ data Command = Noop
 data PtuiState = PtuiState { _cursorPosition :: (Int, Int)
                            , _x11 :: PtuiX11
                            , _colors :: PtuiColors
-                           , _font :: AXftFont
-                           , _fontHeight :: Int
-                           , _fontWidth :: Int
-                           , _fontDescent :: Int
+                           , _font :: PtuiFont
                            , _grid :: PtuiGrid
                            , _channel :: TQueue Command
                            }
 
+makeLenses ''PtuiFont
 makeLenses ''PtuiCell
 makeLenses ''PtuiState
 makeLenses ''PtuiColors

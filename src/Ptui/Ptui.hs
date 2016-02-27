@@ -4,6 +4,7 @@ import Ptui.Args
 import Ptui.Config (fromConfig)
 import Ptui.Types
 import Ui.Xft
+import Ui.Xutils
 
 import Lens.Simple
 import Control.Monad.State (runStateT)
@@ -24,24 +25,18 @@ runPtui p a = do
 
 initState :: PtuiConfig -> IO PtuiState
 initState settings = do
-    x <- initX settings
-    xftFont <- openAXftFont (x^.display) (x^.screen) (settings^.cfont)
-    fh <- xft_height xftFont
-    fw <- xft_max_advance_width xftFont
-    fd <- xft_descent xftFont
     chan <- atomically newTQueue
+    x <- initX settings
+    ft <- fetchFont x (settings^.cfont)
     (_, wx, wy, ww, wh, wb, _) <- X.getGeometry (x^.display) (x^.window)
-    let cols = quot (fromIntegral ww - (2 * fromIntegral wb)) fw
-    let rows = quot (fromIntegral wh - (2 * fromIntegral wb)) fh
+    let cols = quot (fromIntegral ww - (2 * fromIntegral wb)) (ft^.width)
+    let rows = quot (fromIntegral wh - (2 * fromIntegral wb)) (ft^.height)
     let rowCells = array (0, cols) [(i,Just PtuiCell {_glyph="X",_fg="red",_bg="white",_wide=False})|i<-[0..cols]]
     let g = array (0, rows) [(i,rowCells)|i<-[0..rows]]
     pure PtuiState { _cursorPosition = (0,0)
                    , _x11 = x
                    , _colors = settings^.ccolors
-                   , _font = xftFont
-                   , _fontHeight = fh
-                   , _fontWidth = fw
-                   , _fontDescent = fd
+                   , _font = ft
                    , _grid = g
                    , _channel = chan
                    }

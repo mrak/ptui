@@ -41,10 +41,12 @@ ptui = do
 
     liftIO $ do
         (master,slave) <- openPseudoTerminal
+        dupTo master stdInput
         forkIO $ pt master chan
         forkIO $ ui w chan
         pid <- spawnShell slave
         installHandler sigCHLD (CatchInfo $ sigchld pid) Nothing
+        installHandler sigINT (Catch $ sigint pid) Nothing
         setTerminalSize master 54 64 120 120
         X.clearWindow d w
     uiLoop
@@ -77,6 +79,9 @@ pt f c = input f >>= pure . runFSM >>= mapM_ (atomically . writeTQueue c)
               IO.hSetBinaryMode h True
               IO.hSetBuffering h $ IO.BlockBuffering Nothing
               pure h
+
+sigint :: ProcessID -> IO ()
+sigint pid = signalProcessGroup sigHUP pid >> exitSuccess
 
 sigchld :: ProcessID -> SignalInfo -> IO ()
 sigchld pid si = case siginfoSpecific si of
