@@ -58,6 +58,7 @@ printCmd c = print c
 
 loop :: Ptui ()
 loop = do
+    drawGrid
     c <- use channel
     pid <- use childPid
     cmd <- nextCommand

@@ -9,10 +9,11 @@ import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xlib.Extras as XE
 import qualified Graphics.X11.Xrender as XR
 import Graphics.X11.Xlib.Atom (internAtom)
-import Graphics.X11.Xlib.Misc (setWMProtocols)
+import Graphics.X11.Xlib.Misc (setWMProtocols,lockDisplay,unlockDisplay)
 import Control.Monad.Trans (liftIO)
 import qualified Data.Map.Strict as M
-import Control.Monad (forever)
+import Control.Monad (forever,when)
+import Control.Concurrent (threadDelay)
 import Data.Bits ((.|.))
 import Control.Concurrent.STM (atomically,TQueue,writeTQueue,readTQueue)
 
@@ -32,10 +33,14 @@ uiCommands :: X.Display -> X.Window -> TQueue Command -> IO ()
 uiCommands d w q = do
     X.selectInput d w (X.exposureMask .|. X.buttonPressMask)
     X.allocaXEvent $ \e -> forever $ do
-        X.sync d True
-        X.nextEvent d e
-        ev <- XE.getEvent e
-        atomically $ writeTQueue q $ X11Event $ XE.eventName ev
+        lockDisplay d
+        evs <- X.pending d
+        when (evs > 0) $ do
+            X.nextEvent d e
+            ev <- XE.getEvent e
+            atomically $ writeTQueue q $ X11Event $ XE.eventName ev
+        threadDelay 16666
+        unlockDisplay d
 
 
 isWMDeleteWinEvent :: XE.Event -> IO Bool

@@ -21,13 +21,18 @@ data CLIArgs = CLIArgs
     { cliConfig :: Maybe FilePath
     }
 
-data PtuiCell = PtuiCell { _glyph :: String
+data PtuiCell = PtuiCell { _glyph :: Char
                          , _fg :: String
                          , _bg :: String
                          , _wide :: Bool
+                         , _dirty :: Bool
                          } deriving Show
 
-type PtuiGrid = Array Int (Array Int (Maybe PtuiCell))
+data PtuiGrid = PtuiGrid
+              { _rows :: Int
+              , _cols :: Int
+              , _cells :: Array Int PtuiCell
+              }
 
 data PtuiColors = PtuiColors { _foreground :: String
                              , _background :: String
@@ -139,6 +144,7 @@ data PtuiState = PtuiState { _cursorPosition :: (Int, Int)
 
 makeLenses ''PtuiFont
 makeLenses ''PtuiCell
+makeLenses ''PtuiGrid
 makeLenses ''PtuiState
 makeLenses ''PtuiColors
 makeLenses ''PtuiWindow
