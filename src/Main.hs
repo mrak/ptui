@@ -10,7 +10,7 @@ import Ui.Xft
 import Pt.Ioctl (setControllingTerminal,setTerminalSize)
 
 import Lens.Simple
-import Control.Monad (when,forever)
+import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import qualified Graphics.X11.Xlib as X
 import qualified Graphics.X11.Xlib.Extras as XE
@@ -28,7 +28,6 @@ import Data.Maybe (fromMaybe)
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified System.IO as IO
 import System.Posix.Terminal (openPseudoTerminal)
-import Data.Bits ((.|.))
 
 main :: IO ()
 main = getArgs >>= runPtui ptui >> exitSuccess
@@ -39,40 +38,37 @@ ptui = do
     w <- use $ x11.window
     chan <- use channel
 
-    liftIO $ do
+    p <- liftIO $ do
         (master,slave) <- openPseudoTerminal
         dupTo master stdInput
-        forkIO $ pt master chan
-        forkIO $ ui w chan
+        forkIO $ ptCommands master chan
+        forkIO $ uiCommands d w chan
         pid <- spawnShell slave
         installHandler sigCHLD (CatchInfo $ sigchld pid) Nothing
         installHandler sigINT (Catch $ sigint pid) Nothing
         setTerminalSize master 54 64 120 120
         X.clearWindow d w
-    uiLoop
+        pure pid
+    childPid .= p
+    loop
 
 printCmd :: Command -> IO ()
 printCmd (Output c) = putChar c
 printCmd c = print c
 
-uiLoop :: Ptui ()
-uiLoop = do
+loop :: Ptui ()
+loop = do
     c <- use channel
-    liftIO $ atomically (readTQueue c) >>= printCmd
-    uiLoop
+    pid <- use childPid
+    cmd <- nextCommand
+    case cmd of
+            WindowClose -> liftIO $ sigint pid
+            X11Event _ -> liftIO $ sigint pid
+            _ -> liftIO $ printCmd cmd
+    loop
 
-ui :: X.Window -> TQueue Command -> IO ()
-ui w c = do
-    d <- X.openDisplay ""
-    X.selectInput d w (X.exposureMask .|. X.buttonPressMask)
-    X.allocaXEvent $ \e -> forever $ do
-        X.sync d True
-        X.nextEvent d e
-        ev <- XE.getEvent e
-        atomically $ writeTQueue c $ X11Event $ XE.eventName ev
-
-pt :: Fd -> TQueue Command -> IO ()
-pt f c = input f >>= pure . runFSM >>= mapM_ (atomically . writeTQueue c)
+ptCommands :: Fd -> TQueue Command -> IO ()
+ptCommands f c = input f >>= pure . runFSM >>= mapM_ (atomically . writeTQueue c)
     where input fd = unbuffer fd >>= B.hGetContents
           unbuffer fd = do
               h <- fdToHandle fd

@@ -6,34 +6,15 @@ import Ui.ColorCache
 
 import Lens.Simple
 import qualified Graphics.X11.Xlib as X
+import qualified Graphics.X11.Xlib.Extras as XE
 import qualified Graphics.X11.Xrender as XR
+import Graphics.X11.Xlib.Atom (internAtom)
+import Graphics.X11.Xlib.Misc (setWMProtocols)
 import Control.Monad.Trans (liftIO)
-import Data.Array.IArray (assocs, Array)
 import qualified Data.Map.Strict as M
-
-drawGrid :: Ptui ()
-drawGrid = do
-    g <- use grid
-    mapM_ drawRow $ assocs g
-    where
-        drawRow :: (Int, Array Int (Maybe PtuiCell)) -> Ptui ()
-        drawRow (y,a) = mapM_ (drawChar y) $ assocs a
-        drawChar _ (_,Nothing) = pure ()
-        drawChar y (x,Just g) = drawGlyph x y (g^.fg) (g^.bg) (g^.glyph)
-
-drawGlyph :: Int -> Int -> String -> String -> String -> Ptui ()
-drawGlyph x y' f b s = do
-    let y = y' + 1
-    xftFont <- use $ font.face
-    htext <- use $ font.height
-    wtext <- use $ font.width
-    descent <- use $ font.descent
-    dpy <- use $ x11.display
-    win <- use $ x11.window
-    sn <- use $ x11.screenNumber
-    liftIO $ withDrawingColors dpy win f b $ \draw f' b' -> do
-                drawXftRect draw b' (x * wtext) (y * htext - htext) wtext htext
-                drawXftString draw f' xftFont (x * wtext) (y * htext - descent) s
+import Control.Monad (forever)
+import Data.Bits ((.|.))
+import Control.Concurrent.STM (atomically,TQueue,writeTQueue,readTQueue)
 
 fetchFont :: PtuiX11 -> String -> IO PtuiFont
 fetchFont x name = do
@@ -46,3 +27,42 @@ fetchFont x name = do
                   , _height = fh
                   , _descent = fd
                   }
+
+uiCommands :: X.Display -> X.Window -> TQueue Command -> IO ()
+uiCommands d w q = do
+    X.selectInput d w (X.exposureMask .|. X.buttonPressMask)
+    X.allocaXEvent $ \e -> forever $ do
+        X.sync d True
+        X.nextEvent d e
+        ev <- XE.getEvent e
+        atomically $ writeTQueue q $ X11Event $ XE.eventName ev
+
+
+isWMDeleteWinEvent :: XE.Event -> IO Bool
+isWMDeleteWinEvent e = pure True
+
+initPixel :: X.Display -> String -> IO X.Pixel
+initPixel display color = do
+  let colormap = X.defaultColormap display (X.defaultScreen display)
+  (apros,real) <- X.allocNamedColor display colormap color
+  pure $ X.color_pixel apros
+
+initX :: PtuiConfig -> IO PtuiX11
+initX settings = do
+    X.initThreads
+    d <- X.openDisplay ""
+    let sn    = X.defaultScreen d
+        black = X.blackPixel d sn
+    bg <- initPixel d (settings^.ccolors.background)
+    rootw <- X.rootWindow d sn
+    w <- X.createSimpleWindow d rootw 0 0 100 100 2 bg bg
+    a <- internAtom d "WM_DELETE_WINDOW" False
+    setWMProtocols d w [a]
+    X.setTextProperty d w (settings^.cwindow.title) X.wM_NAME
+    X.setTextProperty d w (settings^.cwindow.clazz) X.wM_NAME
+    X.mapWindow d w
+    pure PtuiX11 { _display = d
+                 , _window = w
+                 , _screenNumber = sn
+                 , _screen = X.defaultScreenOfDisplay d
+                 }

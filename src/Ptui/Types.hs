@@ -11,6 +11,7 @@ import Control.Monad.IO.Class (MonadIO)
 import Graphics.X11.Types (Window)
 import Graphics.X11.Xlib.Types (Display, ScreenNumber, Screen)
 import Control.Concurrent.STM (TQueue)
+import System.Posix.Types (ProcessID)
 
 data Args = Args
     { config :: FilePath
@@ -124,6 +125,7 @@ data Command = Noop
              | SetCharset CharacterSetSlot CharacterSet
              | SetIconTitle String
              | X11Event String
+             | WindowClose
              deriving Show
 
 data PtuiState = PtuiState { _cursorPosition :: (Int, Int)
@@ -132,6 +134,7 @@ data PtuiState = PtuiState { _cursorPosition :: (Int, Int)
                            , _font :: PtuiFont
                            , _grid :: PtuiGrid
                            , _channel :: TQueue Command
+                           , _childPid :: ProcessID
                            }
 
 makeLenses ''PtuiFont
