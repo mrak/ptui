@@ -23,7 +23,10 @@ executable ptui
                      , Ui.ColorCache
                      , Ui.Xutils
                      , Ui.Xft
+                     , Ui.Commands
                      , Pt.Ioctl
+                     , Pt.Spawn
+                     , Pt.Commands
                      , Pt.StateMachine
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base >= 4.7 && < 5

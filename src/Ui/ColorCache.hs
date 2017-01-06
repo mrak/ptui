@@ -75,18 +75,18 @@ putXftCachedColor name cptr =
 initAXftColor' :: Display -> Visual -> Colormap -> String -> IO AXftColor
 initAXftColor' d v cm c = do
   cc <- getXftCachedColor c
-  c' <- case cc of
+  case cc of
           Just col -> return col
-          _        -> do c'' <- mallocAXftColor d v cm c
-                         putXftCachedColor c c''
-                         return c''
-  return c'
+          _        -> do
+              c'' <- mallocAXftColor d v cm c
+              putXftCachedColor c c''
+              return c''
 
 initAXftColor :: Display -> Visual -> Colormap -> String -> IO AXftColor
-initAXftColor d v cm c = handle black $ (initAXftColor' d v cm c)
+initAXftColor d v cm c = handle black $ initAXftColor' d v cm c
   where
     black :: SomeException -> IO AXftColor
-    black = (const $ initAXftColor' d v cm "black")
+    black = const $ initAXftColor' d v cm "black"
 
 withDrawingColors :: -- MonadIO m =>
                      Display -> Drawable -> String -> String
